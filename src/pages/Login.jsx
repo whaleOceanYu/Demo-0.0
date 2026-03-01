@@ -7,16 +7,11 @@ export default function Login() {
 
   return (
     <>
-      {/* 超强覆盖：移除所有可能产生边框的样式 */}
+      {/* 终极覆盖：所有可能产生线条的地方全部抹杀 */}
       <style>{`
-        /* 所有表单相关元素的边框和伪元素全部清除 */
-        .adm-form,
-        .adm-form-item,
-        .adm-list,
-        .adm-list-item,
-        .adm-list-item-content,
-        .adm-input-wrapper,
-        .adm-input {
+        /* 表单容器 */
+        .adm-form, .adm-form-item, .adm-list, .adm-list-item,
+        .adm-list-item-content, .adm-input-wrapper, .adm-input {
           border: none !important;
           border-top: none !important;
           border-bottom: none !important;
@@ -24,14 +19,12 @@ export default function Login() {
           border-right: none !important;
           outline: none !important;
           box-shadow: none !important;
+          background: transparent !important;
         }
-        /* 所有伪元素生成的线条全部干掉 */
-        .adm-form-item::before,
-        .adm-form-item::after,
-        .adm-list-item::before,
-        .adm-list-item::after,
-        .adm-list-item-content::before,
-        .adm-list-item-content::after {
+        /* 所有伪元素线条 */
+        .adm-form-item::before, .adm-form-item::after,
+        .adm-list-item::before, .adm-list-item::after,
+        .adm-list-item-content::before, .adm-list-item-content::after {
           display: none !important;
           content: none !important;
           height: 0 !important;
@@ -39,19 +32,20 @@ export default function Login() {
           background: transparent !important;
           border: none !important;
         }
-        /* 特别针对可能存在的底部线条 */
-        .adm-form-item {
-          border-bottom: none !important;
+        /* 特别针对可能藏在更深处的 */
+        .adm-list-item .adm-list-item-content .adm-list-item-content-main {
+          border: none !important;
         }
-        .adm-form-item:last-child::after {
-          display: none !important;
-        }
-        /* 确保输入框本身无边框 */
+        /* 输入框本身背景保留，但边框去掉 */
         .adm-input-wrapper {
           background: transparent !important;
         }
         .adm-input {
           background: #f8f9ff !important;
+        }
+        /* 强制移除任何可能从父级继承的线条 */
+        body .adm-form-item, body .adm-list-item {
+          border-bottom: none !important;
         }
       `}</style>
       <div style={{ 
