@@ -7,70 +7,90 @@ export default function Login() {
 
   return (
     <div style={{ 
-      padding: '60px 24px',  // 增加上下 padding，让整体更舒展
+      padding: '48px 24px', 
       maxWidth: '400px', 
       margin: '0 auto',
       minHeight: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'center'
+      justifyContent: 'center',
+      background: 'transparent'
     }}>
-      <div style={{ textAlign: 'center', marginBottom: '50px' }}>
-        <h1 style={{ fontSize: '36px', color: '#7b68aa', marginBottom: '8px' }}>ProteinMap</h1>
-        <p style={{ color: '#8a9bb5', fontSize: '16px' }}>Track. Fuel. Perform.</p>
+      {/* Logo 和标语 */}
+      <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+        <h1 style={{ 
+          fontSize: '36px', 
+          color: '#7b68aa', 
+          marginBottom: '8px',
+          fontWeight: 700,
+          letterSpacing: '-0.5px'
+        }}>
+          ProteinMap
+        </h1>
+        <p style={{ color: '#8a9bb5', fontSize: '16px', fontWeight: 400 }}>
+          Track. Fuel. Perform.
+        </p>
       </div>
 
+      {/* 表单 */}
       <Form layout='vertical'>
-        <Form.Item style={{ marginBottom: '24px' }}>  {/* 增加底部间距 */}
+        {/* 邮箱输入框 */}
+        <Form.Item style={{ marginBottom: '24px' }}>
           <Input
             placeholder='電郵'
-            prefix={<MailOutline style={{ fontSize: '18px', color: '#9b8bc6', marginRight: '8px' }} />}
+            prefix={<MailOutline style={{ fontSize: '20px', color: '#9b8bc6', marginRight: '8px' }} />}
             style={{ 
-              background: '#f0f2f8', 
-              border: 'none', 
-              borderRadius: '40px',  // 更大圆角
-              padding: '16px 20px',  // 增加高度
-              fontSize: '16px',
-              '--prefix-width': 'auto'
-            }} 
-          />
-        </Form.Item>
-
-        <Form.Item style={{ marginBottom: '32px' }}>
-          <Input
-            type='password'
-            placeholder='密碼'
-            prefix={<LockOutline style={{ fontSize: '18px', color: '#9b8bc6', marginRight: '8px' }} />}
-            style={{ 
-              background: '#f0f2f8', 
+              background: '#ffffff',
               border: 'none', 
               borderRadius: '40px',
               padding: '16px 20px',
               fontSize: '16px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
               '--prefix-width': 'auto'
             }} 
           />
         </Form.Item>
 
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        {/* 密码输入框 */}
+        <Form.Item style={{ marginBottom: '32px' }}>
+          <Input
+            type='password'
+            placeholder='密碼'
+            prefix={<LockOutline style={{ fontSize: '20px', color: '#9b8bc6', marginRight: '8px' }} />}
+            style={{ 
+              background: '#ffffff',
+              border: 'none', 
+              borderRadius: '40px',
+              padding: '16px 20px',
+              fontSize: '16px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+              '--prefix-width': 'auto'
+            }} 
+          />
+        </Form.Item>
+
+        {/* 登录按钮 */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
           <Button
             size='large'
             style={{ 
               background: '#7b68aa', 
               color: 'white', 
               borderRadius: '40px',
-              height: '50px',
+              height: '52px',
               fontSize: '16px',
+              fontWeight: 600,
               border: 'none',
-              marginBottom: '20px',
-              width: '200px'
+              width: '200px',
+              boxShadow: '0 4px 12px rgba(123, 104, 170, 0.3)'
             }}
           >
             登入
           </Button>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+        {/* 访客浏览按钮 */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
           <Button
             size='large'
             onClick={() => navigate('/map')}
@@ -78,10 +98,10 @@ export default function Login() {
               background: 'transparent', 
               color: '#7b68aa', 
               borderRadius: '40px',
-              height: '50px',
+              height: '52px',
               fontSize: '16px',
+              fontWeight: 600,
               border: '2px solid #7b68aa',
-              marginBottom: '30px',
               width: '200px'
             }}
           >
@@ -89,6 +109,7 @@ export default function Login() {
           </Button>
         </div>
 
+        {/* 注册引导 */}
         <div style={{ textAlign: 'center', color: '#8a9bb5', fontSize: '15px' }}>
           <span>新用戶？</span>
           <button
@@ -99,9 +120,9 @@ export default function Login() {
               color: '#7b68aa', 
               textDecoration: 'underline',
               fontSize: '15px',
+              fontWeight: 500,
               cursor: 'pointer',
-              padding: 0,
-              marginLeft: '4px'
+              padding: '0 4px'
             }}
           >
             註冊
