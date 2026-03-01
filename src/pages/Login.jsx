@@ -40,8 +40,9 @@ export default function Login() {
         boxShadow: '0 8px 24px rgba(0,0,0,0.05)',
         marginBottom: '16px'
       }}>
-        <Form layout='vertical'>
-          {/* 邮箱输入框 - 无下划线 */}
+        {/* Form 整体无边框 */}
+        <Form layout='vertical' style={{ border: 'none' }}>
+          {/* 邮箱输入框 - 无边框 */}
           <Form.Item style={{ marginBottom: '24px', border: 'none' }}>
             <Input
               placeholder='電郵'
@@ -57,7 +58,7 @@ export default function Login() {
             />
           </Form.Item>
 
-          {/* 密码输入框 - 无下划线 */}
+          {/* 密码输入框 - 无边框 */}
           <Form.Item style={{ marginBottom: '32px', border: 'none' }}>
             <Input
               type='password'
