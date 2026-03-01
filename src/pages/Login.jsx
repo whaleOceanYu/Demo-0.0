@@ -7,23 +7,28 @@ export default function Login() {
 
   return (
     <>
-      {/* 强制移除所有可能产生灰线的样式 */}
+      {/* 全局样式强制移除所有可能的边框 */}
       <style>{`
-        .adm-form-item, .adm-form-item-horizontal {
+        .adm-form-item,
+        .adm-list-item,
+        .adm-list-item-content,
+        .adm-input-wrapper,
+        .adm-input {
           border: none !important;
-        }
-        .adm-form-item::after {
-          display: none !important;
-        }
-        .adm-input-wrapper {
-          border: none !important;
+          border-bottom: none !important;
+          border-top: none !important;
+          border-left: none !important;
+          border-right: none !important;
           box-shadow: none !important;
+          outline: none !important;
         }
-        .adm-list-item {
-          border: none !important;
-        }
+        .adm-form-item::after,
         .adm-list-item::after {
           display: none !important;
+          content: none !important;
+        }
+        .adm-list-item-content {
+          border-bottom: none !important;
         }
       `}</style>
       <div style={{ 
@@ -36,7 +41,6 @@ export default function Login() {
         justifyContent: 'center',
         background: 'transparent'
       }}>
-        {/* Logo 和标语 */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <h1 style={{ 
             fontSize: '36px', 
@@ -52,7 +56,6 @@ export default function Login() {
           </p>
         </div>
 
-        {/* 白色卡片区域 */}
         <div style={{
           backgroundColor: 'white',
           borderRadius: '32px',

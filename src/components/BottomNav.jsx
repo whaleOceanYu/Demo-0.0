@@ -28,9 +28,9 @@ export default function BottomNav() {
           key={item.key} 
           title={item.title}
           style={{ 
-            fontSize: '30px',
-            fontWeight: currentPath === item.key ? '700' : '500',
-            color: currentPath === item.key ? '#7b68aa' : '#8a9bb5'
+            fontSize: '24px !important',
+            fontWeight: currentPath === item.key ? '700 !important' : '500 !important',
+            color: currentPath === item.key ? '#7b68aa !important' : '#8a9bb5 !important'
           }}
         />
       ))}
