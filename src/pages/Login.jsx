@@ -7,28 +7,51 @@ export default function Login() {
 
   return (
     <>
-      {/* 全局样式强制移除所有可能的边框 */}
+      {/* 超强覆盖：移除所有可能产生边框的样式 */}
       <style>{`
+        /* 所有表单相关元素的边框和伪元素全部清除 */
+        .adm-form,
         .adm-form-item,
+        .adm-list,
         .adm-list-item,
         .adm-list-item-content,
         .adm-input-wrapper,
         .adm-input {
           border: none !important;
-          border-bottom: none !important;
           border-top: none !important;
+          border-bottom: none !important;
           border-left: none !important;
           border-right: none !important;
-          box-shadow: none !important;
           outline: none !important;
+          box-shadow: none !important;
         }
+        /* 所有伪元素生成的线条全部干掉 */
+        .adm-form-item::before,
         .adm-form-item::after,
-        .adm-list-item::after {
+        .adm-list-item::before,
+        .adm-list-item::after,
+        .adm-list-item-content::before,
+        .adm-list-item-content::after {
           display: none !important;
           content: none !important;
+          height: 0 !important;
+          width: 0 !important;
+          background: transparent !important;
+          border: none !important;
         }
-        .adm-list-item-content {
+        /* 特别针对可能存在的底部线条 */
+        .adm-form-item {
           border-bottom: none !important;
+        }
+        .adm-form-item:last-child::after {
+          display: none !important;
+        }
+        /* 确保输入框本身无边框 */
+        .adm-input-wrapper {
+          background: transparent !important;
+        }
+        .adm-input {
+          background: #f8f9ff !important;
         }
       `}</style>
       <div style={{ 
