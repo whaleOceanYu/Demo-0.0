@@ -41,8 +41,8 @@ export default function Login() {
         marginBottom: '16px'
       }}>
         <Form layout='vertical'>
-          {/* 邮箱输入框 */}
-          <Form.Item style={{ marginBottom: '24px' }}>
+          {/* 邮箱输入框 - 无下划线 */}
+          <Form.Item style={{ marginBottom: '24px', border: 'none' }}>
             <Input
               placeholder='電郵'
               prefix={<MailOutline style={{ fontSize: '20px', color: '#9b8bc6', marginRight: '8px' }} />}
@@ -57,8 +57,8 @@ export default function Login() {
             />
           </Form.Item>
 
-          {/* 密码输入框 */}
-          <Form.Item style={{ marginBottom: '32px' }}>
+          {/* 密码输入框 - 无下划线 */}
+          <Form.Item style={{ marginBottom: '32px', border: 'none' }}>
             <Input
               type='password'
               placeholder='密碼'

@@ -7,7 +7,7 @@ export default function BottomNav() {
 
   const tabs = [
     { key: '/map', title: '地圖' },
-    { key: '/profile', title: '個人' },
+    { key: '/profile', title: '個人檔案' },
   ];
 
   const currentPath = location.pathname;
@@ -28,8 +28,8 @@ export default function BottomNav() {
           key={item.key} 
           title={item.title}
           style={{ 
-            fontSize: '16px',
-            fontWeight: currentPath === item.key ? '600' : '400',
+            fontSize: '18px',
+            fontWeight: currentPath === item.key ? '700' : '500',
             color: currentPath === item.key ? '#7b68aa' : '#8a9bb5'
           }}
         />
