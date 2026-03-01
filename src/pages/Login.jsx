@@ -7,7 +7,7 @@ export default function Login() {
 
   return (
     <div style={{ 
-      padding: '40px 24px', 
+      padding: '60px 24px',  // 增加上下 padding，让整体更舒展
       maxWidth: '400px', 
       margin: '0 auto',
       minHeight: '100vh',
@@ -15,28 +15,28 @@ export default function Login() {
       flexDirection: 'column',
       justifyContent: 'center'
     }}>
-      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-        <h1 style={{ fontSize: '32px', color: '#7b68aa', marginBottom: '8px' }}>ProteinMap</h1>
+      <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+        <h1 style={{ fontSize: '36px', color: '#7b68aa', marginBottom: '8px' }}>ProteinMap</h1>
         <p style={{ color: '#8a9bb5', fontSize: '16px' }}>Track. Fuel. Perform.</p>
       </div>
 
       <Form layout='vertical'>
-        <Form.Item style={{ marginBottom: '20px' }}>
+        <Form.Item style={{ marginBottom: '24px' }}>  {/* 增加底部间距 */}
           <Input
             placeholder='電郵'
             prefix={<MailOutline style={{ fontSize: '18px', color: '#9b8bc6', marginRight: '8px' }} />}
             style={{ 
               background: '#f0f2f8', 
               border: 'none', 
-              borderRadius: '30px',
-              padding: '12px 16px',
+              borderRadius: '40px',  // 更大圆角
+              padding: '16px 20px',  // 增加高度
               fontSize: '16px',
               '--prefix-width': 'auto'
             }} 
           />
         </Form.Item>
 
-        <Form.Item style={{ marginBottom: '24px' }}>
+        <Form.Item style={{ marginBottom: '32px' }}>
           <Input
             type='password'
             placeholder='密碼'
@@ -44,8 +44,8 @@ export default function Login() {
             style={{ 
               background: '#f0f2f8', 
               border: 'none', 
-              borderRadius: '30px',
-              padding: '12px 16px',
+              borderRadius: '40px',
+              padding: '16px 20px',
               fontSize: '16px',
               '--prefix-width': 'auto'
             }} 
@@ -58,11 +58,11 @@ export default function Login() {
             style={{ 
               background: '#7b68aa', 
               color: 'white', 
-              borderRadius: '30px',
-              height: '48px',
+              borderRadius: '40px',
+              height: '50px',
               fontSize: '16px',
               border: 'none',
-              marginBottom: '16px',
+              marginBottom: '20px',
               width: '200px'
             }}
           >
@@ -77,11 +77,11 @@ export default function Login() {
             style={{ 
               background: 'transparent', 
               color: '#7b68aa', 
-              borderRadius: '30px',
-              height: '48px',
+              borderRadius: '40px',
+              height: '50px',
               fontSize: '16px',
               border: '2px solid #7b68aa',
-              marginBottom: '20px',
+              marginBottom: '30px',
               width: '200px'
             }}
           >
@@ -89,7 +89,7 @@ export default function Login() {
           </Button>
         </div>
 
-        <div style={{ textAlign: 'center', color: '#8a9bb5', fontSize: '14px' }}>
+        <div style={{ textAlign: 'center', color: '#8a9bb5', fontSize: '15px' }}>
           <span>新用戶？</span>
           <button
             onClick={() => navigate('/signup')}
@@ -98,7 +98,7 @@ export default function Login() {
               border: 'none', 
               color: '#7b68aa', 
               textDecoration: 'underline',
-              fontSize: '14px',
+              fontSize: '15px',
               cursor: 'pointer',
               padding: 0,
               marginLeft: '4px'

@@ -7,7 +7,6 @@ export default function BottomNav() {
 
   const tabs = [
     { key: '/map', title: '地圖' },
-    { key: '/menu', title: '菜單' },
     { key: '/profile', title: '個人' },
   ];
 
@@ -29,7 +28,9 @@ export default function BottomNav() {
           title={item.title}
           style={{ 
             color: currentPath === item.key ? '#7b68aa' : '#8a9bb5',
-            fontSize: '14px'
+            fontSize: '16px', // 增大字体
+            fontWeight: currentPath === item.key ? '600' : '400',
+            padding: '12px 0' // 增加垂直内边距，使触控区域更大
           }}
         />
       ))}
