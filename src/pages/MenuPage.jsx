@@ -1,161 +1,147 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { NavBar, Tabs, Card, Tag, Grid } from 'antd-mobile';
-import { restaurants } from '../data';
+import NutritionBar from '../components/ui/NutritionBar';
+import { getRestaurantById } from '../services/restaurantService';
+import { ROUTES } from '../constants/routes';
+import { C } from '../constants/colors';
 
 export default function MenuPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const restaurant = restaurants.find(r => r.id === parseInt(id)) || restaurants[0];
-
   const [activeTab, setActiveTab] = useState('增肌');
+
+  const restaurant = getRestaurantById(id);
+
+  if (!restaurant) {
+    return (
+      <div style={{ textAlign: 'center', padding: '80px 24px', color: C.textLight, background: C.bg, minHeight: '100dvh' }}>
+        <div style={{ fontSize: '14px', marginBottom: '16px' }}>找不到此餐廳</div>
+        <div
+          onClick={() => navigate(ROUTES.MAP)}
+          style={{ display: 'inline-block', color: C.primary, fontWeight: '600', cursor: 'pointer', fontSize: '14px' }}
+        >
+          ← 返回地圖
+        </div>
+      </div>
+    );
+  }
+
   const isGain = activeTab === '增肌';
-
-  // 根据目标排序菜品（增肌按蛋白质降序，减脂按脂肪升序）
-  const sortedDishes = [...restaurant.dishes].sort((a, b) => {
-    if (isGain) {
-      return b.protein - a.protein;
-    } else {
-      return a.fat - b.fat;
-    }
-  });
-
-  // 计算营养总量用于比例
-  const getTotal = (dish) => dish.protein + dish.fat + dish.carbs;
+  const sortedDishes = [...restaurant.dishes].sort((a, b) =>
+    isGain ? b.protein - a.protein : a.fat - b.fat
+  );
 
   return (
-    <div style={{ maxWidth: '450px', margin: '0 auto', paddingBottom: '20px', background: '#f8f9ff' }}>
-      {/* 餐厅封面图片（模拟） */}
-      <div style={{ 
-        height: '150px', 
-        background: 'linear-gradient(135deg, #9b8bc6, #d4c4fb)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        fontSize: '20px',
-        fontWeight: 'bold',
-        position: 'relative'
+    <div style={{ maxWidth: '450px', margin: '0 auto', minHeight: '100dvh', background: C.bg }}>
+
+      {/* Header */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'rgba(244,241,236,0.96)', backdropFilter: 'blur(12px)',
+        borderBottom: `1px solid ${C.border}`,
+        padding: '0 16px',
       }}>
-        <span>{restaurant.name} 封面</span>
-        <span style={{ position: 'absolute', bottom: '8px', right: '12px', fontSize: '12px', color: 'rgba(255,255,255,0.7)' }}>【需替换餐厅照片】</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', height: '56px' }}>
+          <div
+            onClick={() => navigate(ROUTES.MAP)}
+            style={{
+              width: '34px', height: '34px', borderRadius: '50%',
+              background: C.bgTint, border: `1px solid ${C.border}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', flexShrink: 0,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke={C.primaryDark} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: '700', fontSize: '17px', color: C.primaryDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {restaurant.name}
+            </div>
+            <div style={{ fontSize: '12px', color: C.textLight }}>
+              {restaurant.cuisine} · {restaurant.priceRange}
+            </div>
+          </div>
+        </div>
+
+        {/* Tab bar */}
+        <div style={{ display: 'flex', gap: '8px', paddingBottom: '12px' }}>
+          {['增肌', '減脂'].map(tab => (
+            <div
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                flex: 1, textAlign: 'center', padding: '9px 0',
+                borderRadius: '13px', cursor: 'pointer', fontSize: '13px',
+                fontWeight: activeTab === tab ? '600' : '400',
+                background: activeTab === tab ? C.primary : C.bgTint,
+                color: activeTab === tab ? 'white' : C.textLight,
+                transition: 'all 0.15s',
+              }}
+            >
+              {tab === '增肌' ? '🍗 增肌推薦' : '🥗 減脂推薦'}
+            </div>
+          ))}
+        </div>
       </div>
 
-      <NavBar 
-        onBack={() => navigate('/map')}
-        style={{ 
-          '--border-bottom': 'none',
-          background: 'rgba(255,255,255,0.8)',
-          backdropFilter: 'blur(10px)',
-          borderBottom: '1px solid #f0eef5'
-        }}
-      >
-        <span style={{ color: '#5b4b8a', fontWeight: '600' }}>{restaurant.name}</span>
-      </NavBar>
+      {/* Dish list */}
+      <div style={{ padding: '12px 14px 32px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {sortedDishes.map(dish => {
+          const highlight = isGain ? dish.protein > 20 : dish.fat < 10;
+          const highlightLabel = isGain ? '高蛋白' : '低脂';
+          return (
+            <div
+              key={dish.id}
+              style={{
+                borderRadius: '20px',
+                padding: '14px',
+                background: highlight ? 'rgba(107,144,128,0.09)' : 'rgba(255,255,255,0.88)',
+                border: `1.5px solid ${highlight ? C.primaryTint : 'transparent'}`,
+                backdropFilter: 'blur(10px)',
+                boxShadow: highlight ? '0 2px 12px rgba(107,144,128,0.10)' : '0 2px 8px rgba(0,0,0,0.04)',
+                display: 'flex', gap: '12px', alignItems: 'flex-start',
+              }}
+            >
+              {/* Dish image placeholder */}
+              <div style={{
+                width: '72px', height: '72px', borderRadius: '14px', flexShrink: 0,
+                background: `linear-gradient(135deg, ${C.primaryTint}, ${C.bgTint})`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '26px', fontWeight: '700', color: C.primary,
+              }}>
+                {dish.name[0]}
+              </div>
 
-      <Tabs 
-        activeKey={activeTab} 
-        onChange={setActiveTab}
-        style={{ 
-          '--active-line-color': '#9b8bc6',
-          '--title-active-text-color': '#5b4b8a',
-          background: 'rgba(255,255,255,0.8)',
-          backdropFilter: 'blur(10px)',
-          paddingTop: '8px'
-        }}
-      >
-        <Tabs.Tab title='🍗 增肌推薦' key='增肌' />
-        <Tabs.Tab title='🥗 減脂推薦' key='減脂' />
-      </Tabs>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                  <span style={{ fontWeight: '600', fontSize: '15px', color: C.textDark, lineHeight: 1.3 }}>
+                    {dish.name}
+                  </span>
+                  <span style={{ fontSize: '14px', fontWeight: '700', color: C.accent, flexShrink: 0 }}>
+                    ${dish.price}
+                  </span>
+                </div>
 
-      <div style={{ padding: '16px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {sortedDishes.map((dish) => {
-            let highlight = false;
-            let highlightLabel = '';
-            if (isGain && dish.protein > 20) {
-              highlight = true;
-              highlightLabel = '🏷️ 高蛋白';
-            } else if (!isGain && dish.fat < 10) {
-              highlight = true;
-              highlightLabel = '🏷️ 低脂';
-            }
+                {highlight && (
+                  <span style={{
+                    display: 'inline-block', marginTop: '5px',
+                    fontSize: '10px', fontWeight: '600', color: 'white',
+                    background: C.accent, borderRadius: '10px', padding: '2px 8px',
+                  }}>
+                    {highlightLabel}
+                  </span>
+                )}
 
-            const total = getTotal(dish);
-            const proteinPercent = (dish.protein / total * 100).toFixed(0);
-            const fatPercent = (dish.fat / total * 100).toFixed(0);
-            const carbsPercent = (dish.carbs / total * 100).toFixed(0);
+                <NutritionBar protein={dish.protein} fat={dish.fat} carbs={dish.carbs} />
+              </div>
+            </div>
+          );
+        })}
 
-            return (
-              <Card
-                key={dish.id}
-                style={{
-                  backgroundColor: highlight ? 'rgba(243, 235, 255, 0.9)' : 'rgba(255,255,255,0.8)',
-                  border: highlight ? '1px solid #9b8bc6' : 'none',
-                  borderRadius: '20px',
-                  padding: '12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                  backdropFilter: 'blur(10px)'
-                }}
-              >
-                <Grid columns={12} gap={8}>
-                  {/* 左侧图片占位 */}
-                  <Grid.Item span={4}>
-                    <div style={{
-                      width: '100%',
-                      paddingBottom: '100%', // 正方形
-                      background: '#e6e3f0',
-                      borderRadius: '16px',
-                      position: 'relative'
-                    }}>
-                      <span style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '12px', color: '#8a9bb5' }}>【需替换】</span>
-                    </div>
-                  </Grid.Item>
-                  {/* 右侧信息 */}
-                  <Grid.Item span={8}>
-                    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontWeight: '600', color: '#2d3a4b', fontSize: '16px' }}>{dish.name}</span>
-                          <span style={{ color: '#7b68aa', fontWeight: '600' }}>${dish.price}</span>
-                        </div>
-                        {highlight && (
-                          <Tag 
-                            color='#9b8bc6' 
-                            style={{ 
-                              marginTop: '4px', 
-                              borderRadius: '20px',
-                              padding: '2px 8px',
-                              color: 'white',
-                              border: 'none',
-                              fontSize: '10px'
-                            }}
-                          >
-                            {highlightLabel}
-                          </Tag>
-                        )}
-                      </div>
-                      {/* 营养柱状图 */}
-                      <div style={{ marginTop: '8px' }}>
-                        <div style={{ display: 'flex', gap: '2px', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ flex: proteinPercent, background: '#9b8bc6' }} />
-                          <div style={{ flex: fatPercent, background: '#d4c4fb' }} />
-                          <div style={{ flex: carbsPercent, background: '#f0e6ff' }} />
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#8a9bb5', marginTop: '4px' }}>
-                          <span>蛋白 {dish.protein}g</span>
-                          <span>脂肪 {dish.fat}g</span>
-                          <span>碳水 {dish.carbs}g</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Grid.Item>
-                </Grid>
-              </Card>
-            );
-          })}
-        </div>
-        <div style={{ marginTop: '20px', textAlign: 'center', color: '#8a9bb5', fontSize: '12px' }}>
+        <div style={{ textAlign: 'center', color: C.textLight, fontSize: '12px', marginTop: '4px' }}>
           ⚡ 營養數據為 AI 估算，僅供參考
         </div>
       </div>

@@ -5,9 +5,17 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background: linear-gradient(135deg, #f8f9ff 0%, #f0eef5 100%);
-  color: #2d3a4b;
+  /*
+   * 英文/數字：DM Sans（圓潤現代）
+   * 中文：PingFang TC（iPhone 系統字體，蘋果健康 app 同款）→ Noto Sans TC（其他平台）
+   */
+  font-family: 'DM Sans', 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  font-weight: 400;
+  line-height: 1.72;
+  letter-spacing: 0.015em;
+  font-feature-settings: "kern" 1;
+  background: linear-gradient(135deg, #F4F1EC 0%, #EBE7E0 100%);
+  color: #2C3530;
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
@@ -18,7 +26,7 @@ body {
   border-radius: 24px !important;
   border: none !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-  background: rgba(255, 255, 255, 0.7) !important;
+  background: rgba(255, 255, 255, 0.75) !important;
   backdrop-filter: blur(10px);
   margin-bottom: 12px;
 }
@@ -27,21 +35,21 @@ body {
   border-radius: 30px !important;
 }
 
-h1, h2, h3 {
-  color: #5b4b8a;
-  font-weight: 600;
+.adm-progress-bar {
+  --fill-color: #8BADA2 !important;
 }
 
-.adm-progress-bar {
-  --fill-color: #9b8bc6 !important;
+/* antd-mobile Tabs 底部線條顏色 */
+.adm-tabs-tab-line {
+  background: #6B9080 !important;
 }
 
 a {
-  color: #7b68aa;
+  color: #6B9080;
   text-decoration: none;
 }
 a:hover {
-  color: #5b4b8a;
+  color: #3E6854;
 }
 
 button {
@@ -51,16 +59,65 @@ button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #f0f2f8;
+  background-color: #EBE7E0;
   cursor: pointer;
   transition: all 0.2s;
 }
 button:hover {
-  background-color: #e6e3f0;
+  background-color: #D8D3C8;
 }
 
 /* 输入框透明感 */
 .adm-input {
   background: rgba(255,255,255,0.5) !important;
   backdrop-filter: blur(5px);
+}
+
+/* 隱藏滾動條（用於地圖頁底部卡片條） */
+.hide-scrollbar {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* IE / Edge */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;                /* Chrome / Safari */
+}
+
+/*
+ * 標題：Cormorant Garamond（英文品牌感）+ PingFang TC（中文乾淨現代）
+ * 字重降為 600，避免「太多粗體」的視覺疲勞
+ */
+h1, h2, h3 {
+  font-family: 'Cormorant Garamond', 'PingFang TC', 'Noto Sans TC', sans-serif;
+  color: #3E6854;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.45;
+}
+
+/* 想要「品牌標題感」時加在任意元素上 */
+.serif {
+  font-family: 'Cormorant Garamond', 'PingFang TC', 'Noto Sans TC', sans-serif !important;
+  letter-spacing: 0.04em;
+}
+
+/* 輕量說明文字（用於次要描述，減少視覺重量） */
+.text-light-weight {
+  font-weight: 300;
+  color: #7D8E88;
+}
+
+/* 地圖標記從小放大的出現動畫 */
+@keyframes markerGrow {
+  from { transform: scale(0.35); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* 移除搜索欄藍色焦點框 */
+.adm-search-bar .adm-input-element:focus,
+.adm-search-bar-input:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.adm-search-bar .adm-input-wrapper {
+  box-shadow: none !important;
 }

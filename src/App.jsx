@@ -1,20 +1,23 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ROUTES } from './constants/routes';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import MapPage from './pages/MapPage';
 import MenuPage from './pages/MenuPage';
 import ProfilePage from './pages/ProfilePage';
+import FriendsPage from './pages/FriendsPage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path='/' element={<Navigate to='/login' />} />
-        <Route path='/login' element={<Login />} />
-        <Route path='/signup' element={<Signup />} />
-        <Route path='/map' element={<MapPage />} />
-        <Route path='/menu/:id' element={<MenuPage />} />
-        <Route path='/profile' element={<ProfilePage />} />
+        <Route path={ROUTES.HOME}    element={<Navigate to={ROUTES.LOGIN} />} />
+        <Route path={ROUTES.LOGIN}   element={<Login />} />
+        <Route path={ROUTES.SIGNUP}  element={<Signup />} />
+        <Route path={ROUTES.MAP}     element={<MapPage />} />
+        <Route path={ROUTES.MENU}    element={<MenuPage />} />
+        <Route path={ROUTES.FRIENDS} element={<FriendsPage />} />
+        <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
       </Routes>
     </BrowserRouter>
   );
