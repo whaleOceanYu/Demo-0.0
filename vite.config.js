@@ -5,11 +5,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // 將 /api/anthropic/* 代理至 Anthropic API，解決瀏覽器 CORS 限制
-      '/api/anthropic': {
-        target: 'https://api.anthropic.com',
+      // 將 /api/qwen/* 代理至阿里雲 DashScope，解決瀏覽器 CORS 限制
+      '/api/qwen': {
+        target: 'https://dashscope.aliyuncs.com/compatible-mode',
         changeOrigin: true,
-        rewrite: path => path.replace(/^\/api\/anthropic/, ''),
+        rewrite: path => path.replace(/^\/api\/qwen/, ''),
       },
     },
   },

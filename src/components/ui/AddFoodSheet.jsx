@@ -5,7 +5,7 @@ import { getAllRestaurants, searchRestaurants } from '../../services/restaurantS
 import { C } from '../../constants/colors';
 
 // ── "點心" → "加餐" ──────────────────────────────────────────
-const MEAL_TIMES = ['早餐', '午餐', '加餐', '晚餐'];
+const MEAL_TIMES = ['早餐', '午餐', '晚餐', '加餐'];
 
 const autoMealTime = () => {
   const h = new Date().getHours();
@@ -18,40 +18,43 @@ const autoMealTime = () => {
 const calcKcal = (p, f, c) =>
   Math.round(Number(p || 0) * 4 + Number(f || 0) * 9 + Number(c || 0) * 4);
 
-// ── AI 識別 ──────────────────────────────────────────────────
-async function analyzeImage(photoSrc) {
+// ── AI 估算（DashScope / Qwen，name 必填，photoSrc 可選）────
+async function analyzeFood(name, photoSrc) {
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('NO_KEY');
 
-  const base64   = photoSrc.split(',')[1];
-  const mimeType = photoSrc.split(';')[0].split(':')[1];
+  const prompt = `估算「${name}」每份（約一人份）的蛋白質、脂肪、碳水化合物。${photoSrc ? '請結合圖片中的食物判斷份量。' : ''}只返回 JSON，不含其他文字，格式：{"protein":整數,"fat":整數,"carbs":整數}`;
 
-  const res = await fetch('/api/anthropic/v1/messages', {
+  // 有圖片：用 qwen-vl-plus（視覺模型），需數組格式
+  // 無圖片：用 qwen-turbo（純文字），接受字符串
+  const model   = photoSrc ? 'qwen-vl-plus' : 'qwen-turbo';
+  const content = photoSrc
+    ? [{ type: 'image_url', image_url: { url: photoSrc } }, { type: 'text', text: prompt }]
+    : prompt;
+
+  const res = await fetch('/api/qwen/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
+      'Authorization': `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 256,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-          { type: 'text', text: '識別圖中的食物並估算每份的營養。只返回 JSON，格式：{"name":"食物中文名","protein":蛋白質g,"fat":脂肪g,"carbs":碳水g}' },
-        ],
-      }],
+      model,
+      max_tokens: 128,
+      messages: [{ role: 'user', content }],
     }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || '識別失敗');
+    throw new Error(err?.error?.message || `HTTP ${res.status}`);
   }
   const data = await res.json();
-  return JSON.parse(data.content[0].text);
+  const text = data.choices?.[0]?.message?.content ?? '';
+  // 提取 JSON（模型可能用 markdown 代碼塊包裹）
+  const match = text.match(/\{[\s\S]*?\}/);
+  if (!match) throw new Error(`回應格式異常：${text.slice(0, 60)}`);
+  return JSON.parse(match[0]);
 }
 
 // ── 共用樣式 ─────────────────────────────────────────────────
@@ -120,6 +123,7 @@ export default function AddFoodSheet({ onAdd, onClose }) {
   const [selectedRest, setSelectedRest] = useState(null);
   const [photoSrc,    setPhotoSrc]    = useState(null);
   const [analyzing,   setAnalyzing]   = useState(false);
+  const [analyzed,    setAnalyzed]    = useState(false);
   const [aiError,     setAiError]     = useState('');
   const [form,        setForm]        = useState({ name: '', protein: '', fat: '', carbs: '' });
   const fileRef = useRef(null);
@@ -187,27 +191,27 @@ export default function AddFoodSheet({ onAdd, onClose }) {
     reader.onload = ev => {
       setPhotoSrc(ev.target.result);
       setAiError('');
-      setForm({ name: '', protein: '', fat: '', carbs: '' });
     };
     reader.readAsDataURL(file);
   };
 
   const handleAnalyze = async () => {
-    if (!photoSrc) return;
+    if (!form.name.trim()) return;
     setAnalyzing(true);
     setAiError('');
     try {
-      const result = await analyzeImage(photoSrc);
-      setForm({
-        name:    result.name              || '',
-        protein: String(result.protein   ?? ''),
-        fat:     String(result.fat       ?? ''),
-        carbs:   String(result.carbs     ?? ''),
-      });
+      const result = await analyzeFood(form.name, photoSrc);
+      setForm(prev => ({
+        ...prev,
+        protein: String(result.protein ?? ''),
+        fat:     String(result.fat     ?? ''),
+        carbs:   String(result.carbs   ?? ''),
+      }));
+      setAnalyzed(true);
     } catch (err) {
       setAiError(err.message === 'NO_KEY'
-        ? '未在 .env 中配置 VITE_ANTHROPIC_API_KEY，請手動填寫'
-        : `識別失敗：${err.message}`);
+        ? '未配置 VITE_ANTHROPIC_API_KEY，請手動填寫數據'
+        : `估算失敗：${err.message}`);
     } finally {
       setAnalyzing(false);
     }
@@ -233,7 +237,7 @@ export default function AddFoodSheet({ onAdd, onClose }) {
         {/* ── Header ── */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '10px',
-          padding: '14px 16px 12px',
+          padding: '12px 14px 10px',
           background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
           borderBottom: `1px solid ${C.border}`, flexShrink: 0,
         }}>
@@ -241,7 +245,7 @@ export default function AddFoodSheet({ onAdd, onClose }) {
             <div
               onClick={() => {
                 if (screen === 'dishes') { setScreen('restaurants'); setSelectedRest(null); }
-                else { setScreen('main'); setPhotoSrc(null); setAiError(''); setForm({ name: '', protein: '', fat: '', carbs: '' }); }
+                else { setScreen('main'); setPhotoSrc(null); setAiError(''); setAnalyzed(false); setForm({ name: '', protein: '', fat: '', carbs: '' }); }
               }}
               style={{
                 width: '32px', height: '32px', borderRadius: '50%',
@@ -273,7 +277,7 @@ export default function AddFoodSheet({ onAdd, onClose }) {
         </div>
 
         {/* ── Content ── */}
-        <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+        <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
 
           {/* ── MAIN ── */}
           {screen === 'main' && (
@@ -419,66 +423,91 @@ export default function AddFoodSheet({ onAdd, onClose }) {
             <>
               <MealTimeRow />
 
-              <div onClick={() => fileRef.current?.click()} style={{
-                borderRadius: '16px', border: `2px dashed ${C.border}`,
-                padding: '24px', textAlign: 'center', cursor: 'pointer',
-                background: photoSrc ? 'transparent' : C.bgTint,
-                marginBottom: '14px', overflow: 'hidden',
-              }}>
-                {photoSrc ? (
-                  <img src={photoSrc} alt="食物照片"
-                    style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '10px', objectFit: 'contain' }} />
-                ) : (
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
-                      <IconCameraUpload />
-                    </div>
-                    <div style={{ fontSize: '14px', color: C.textLight, fontWeight: '600' }}>點此上傳食物照片</div>
-                    <div style={{ fontSize: '12px', color: C.textLight, marginTop: '4px' }}>支持 JPG / PNG</div>
-                  </div>
-                )}
-              </div>
-              <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+              {/* 食物名稱 — 必填 */}
+              <NInput
+                label="食物名稱（必填）"
+                value={form.name}
+                onChange={v => { setF('name', v); setAnalyzed(false); }}
+                placeholder="例如：雞胸肉飯"
+              />
 
-              {photoSrc && (
-                <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
-                  <div onClick={() => fileRef.current?.click()} style={{
-                    flex: 1, padding: '10px', borderRadius: '12px', textAlign: 'center',
-                    background: C.bgTint, border: `1px solid ${C.border}`,
-                    fontSize: '13px', fontWeight: '600', color: C.textLight, cursor: 'pointer',
-                  }}>
-                    重新上傳
-                  </div>
-                  <div onClick={handleAnalyze} style={{
-                    flex: 2, padding: '10px', borderRadius: '12px', textAlign: 'center',
-                    background: analyzing ? C.bgTint : C.primaryDark,
-                    color: analyzing ? C.textLight : 'white',
-                    fontSize: '13px', fontWeight: '600',
-                    cursor: analyzing ? 'not-allowed' : 'pointer',
-                  }}>
-                    {analyzing ? 'AI 識別中⋯' : 'AI 識別食物'}
-                  </div>
+              {/* 照片 — 選填 */}
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: C.textLight, marginBottom: '6px', letterSpacing: '0.03em' }}>
+                  食物照片（選填）
+                  <span style={{ fontWeight: '400', marginLeft: '6px', color: C.primary }}>添加照片可提高估算精度</span>
                 </div>
-              )}
+                <div onClick={() => fileRef.current?.click()} style={{
+                  borderRadius: '14px', border: `1.5px dashed ${C.border}`,
+                  padding: photoSrc ? '8px 12px' : '14px 12px',
+                  cursor: 'pointer', background: C.bgTint, overflow: 'hidden',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                }}>
+                  {photoSrc ? (
+                    <>
+                      <img src={photoSrc} alt="食物照片"
+                        style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }} />
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: C.primaryDark }}>已選擇照片</div>
+                        <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>點此重新選擇</div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <IconCameraUpload />
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: C.textLight }}>點此上傳照片</div>
+                        <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>支持 JPG / PNG</div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} style={{ display: 'none' }} />
+              </div>
+
+              {/* AI 估算按鈕 */}
+              <div
+                onClick={form.name.trim() && !analyzing ? handleAnalyze : undefined}
+                style={{
+                  marginTop: '12px', padding: '11px', borderRadius: '14px', textAlign: 'center',
+                  background: form.name.trim() && !analyzing ? C.primaryDark : C.bgTint,
+                  color: form.name.trim() && !analyzing ? 'white' : C.textLight,
+                  fontSize: '14px', fontWeight: '600',
+                  cursor: form.name.trim() && !analyzing ? 'pointer' : 'not-allowed',
+                  transition: 'background 0.2s, color 0.2s',
+                }}
+              >
+                {analyzing ? 'AI 估算中⋯' : photoSrc ? 'AI 估算營養（名稱 + 照片）' : 'AI 估算營養（根據名稱）'}
+              </div>
 
               {aiError && (
-                <div style={{ background: '#FDF0EE', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#B85C4A', marginBottom: '14px', lineHeight: 1.6 }}>
+                <div style={{ background: '#FDF0EE', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#B85C4A', marginTop: '10px', lineHeight: 1.6 }}>
                   {aiError}
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <NInput label="食物名稱" value={form.name} onChange={v => setF('name', v)} placeholder="例如：雞胸肉飯" />
-                <div style={{ display: 'flex', gap: '10px' }}>
+              {/* 估算結果 / 手動填寫 */}
+              <div style={{ marginTop: '12px' }}>
+                {!analyzed && (
+                  <div style={{ fontSize: '11px', fontWeight: '600', color: C.textLight, marginBottom: '6px' }}>
+                    或手動填寫營養數據
+                  </div>
+                )}
+                {analyzed && (
+                  <>
+                    <MacroRow protein={form.protein || 0} fat={form.fat || 0} carbs={form.carbs || 0} />
+                    <div style={{ fontSize: '11px', color: C.textLight, margin: '8px 0 6px' }}>以下數據可手動調整</div>
+                  </>
+                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <NInput label="蛋白質 (g)" type="number" value={form.protein} onChange={v => setF('protein', v)} placeholder="0" />
                   <NInput label="脂肪 (g)"   type="number" value={form.fat}     onChange={v => setF('fat',     v)} placeholder="0" />
                   <NInput label="碳水 (g)"   type="number" value={form.carbs}   onChange={v => setF('carbs',   v)} placeholder="0" />
                 </div>
+                {!analyzed && (form.protein || form.fat || form.carbs) && (
+                  <MacroRow protein={form.protein || 0} fat={form.fat || 0} carbs={form.carbs || 0} />
+                )}
               </div>
-
-              {(form.protein || form.fat || form.carbs) && (
-                <MacroRow protein={form.protein || 0} fat={form.fat || 0} carbs={form.carbs || 0} />
-              )}
 
               <div
                 onClick={() => {
@@ -486,7 +515,7 @@ export default function AddFoodSheet({ onAdd, onClose }) {
                   handleAdd({ name: form.name, restaurant: '手動輸入', protein: form.protein || 0, fat: form.fat || 0, carbs: form.carbs || 0 });
                 }}
                 style={{
-                  marginTop: '18px', padding: '14px', borderRadius: '16px', textAlign: 'center',
+                  marginTop: '16px', padding: '14px', borderRadius: '16px', textAlign: 'center',
                   background: form.name.trim() ? C.primary : C.bgTint,
                   color: form.name.trim() ? 'white' : C.textLight,
                   fontSize: '15px', fontWeight: '600',

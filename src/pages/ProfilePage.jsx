@@ -63,11 +63,13 @@ export default function ProfilePage() {
     ? { name: '訪客', age: '--', height: '--', weight: '--' }
     : (user ?? { name: '訪客', age: '--', height: '--', weight: '--' });
 
-  const checkedMeals  = meals.filter(m => m.checked);
-  const totalKcal     = checkedMeals.reduce((s, m) => s + m.kcal, 0);
-  const totalProtein  = checkedMeals.reduce((s, m) => s + m.protein, 0);
-  const targetKcal    = 2200;
-  const targetProtein = 150;
+  const checkedMeals   = meals.filter(m => m.checked);
+  const totalKcal      = checkedMeals.reduce((s, m) => s + m.kcal, 0);
+  const totalProtein   = checkedMeals.reduce((s, m) => s + m.protein, 0);
+  const targetKcal     = 2200;
+  const targetProtein  = 150;
+  const remainingKcal  = targetKcal - totalKcal;
+  const kcalExceeded   = remainingKcal < 0;
 
   const toggleMeal = (id) =>
     setMeals(ms => ms.map(m => m.id === id ? { ...m, checked: !m.checked } : m));
@@ -129,15 +131,24 @@ export default function ProfilePage() {
           <SectionHeader title="今日追蹤" right={new Date().toLocaleDateString('zh-TW', { month: 'long', day: 'numeric' })} />
           <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
             <div style={{ textAlign: 'center' }}>
-              <ProgressCircle
-                percent={Math.min(100, Math.round((totalKcal / targetKcal) * 100))}
-                style={{ '--size': '104px', '--fill-color': C.primary, '--track-color': C.bgTint }}
-              >
-                <div>
-                  <div style={{ fontSize: '18px', fontWeight: '700', color: C.primaryDark, lineHeight: 1 }}>{totalKcal}</div>
-                  <div style={{ fontSize: '10px', color: C.textLight, marginTop: '2px' }}>kcal</div>
-                </div>
-              </ProgressCircle>
+              {/* scaleX(-1) 使進度條逆時針方向消耗 */}
+              <div style={{ display: 'inline-block', transform: 'scaleX(-1)' }}>
+                <ProgressCircle
+                  percent={kcalExceeded ? 0 : Math.round((remainingKcal / targetKcal) * 100)}
+                  style={{ '--size': '104px', '--fill-color': kcalExceeded ? C.accent : C.primary, '--track-color': C.bgTint }}
+                >
+                  {/* 再次翻轉，讓文字方向恢復正常 */}
+                  <div style={{ transform: 'scaleX(-1)' }}>
+                    <div style={{ fontSize: kcalExceeded ? '12px' : '15px', fontWeight: '700', color: kcalExceeded ? C.accent : C.primaryDark, lineHeight: 1 }}>
+                      {kcalExceeded ? `+${-remainingKcal}` : remainingKcal}
+                      <span style={{ fontSize: '9px', fontWeight: '400', marginLeft: '1px' }}>kcal</span>
+                    </div>
+                    <div style={{ fontSize: '10px', color: kcalExceeded ? C.accent : C.textLight, marginTop: '2px' }}>
+                      {kcalExceeded ? '超出' : '剩餘'}
+                    </div>
+                  </div>
+                </ProgressCircle>
+              </div>
               <div style={{ fontSize: '11px', color: C.textLight, marginTop: '8px' }}>目標 {targetKcal} kcal</div>
             </div>
             <div style={{ textAlign: 'center' }}>
