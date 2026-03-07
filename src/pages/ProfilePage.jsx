@@ -7,6 +7,7 @@ import { useUser } from '../context/UserContext';
 import { getAllRestaurants } from '../services/restaurantService';
 import { ROUTES } from '../constants/routes';
 import { C } from '../constants/colors';
+import AddFoodSheet from '../components/ui/AddFoodSheet';
 
 const GOALS = ['增肌', '減脂', '保持體重'];
 
@@ -51,13 +52,16 @@ const SectionHeader = ({ title, right }) => (
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { user, likedIds, goal, setGoal } = useUser();
+  const { user, likedIds, goal, setGoal, isGuest } = useUser();
   const likedRestaurants = getAllRestaurants().filter(r => likedIds.has(r.id));
 
-  const [meals, setMeals] = useState(MOCK_MEALS);
+  // 訪客模式：無飲食記錄；登入用戶顯示 mock 數據
+  const [meals, setMeals] = useState(isGuest ? [] : MOCK_MEALS);
   const [addFoodOpen, setAddFoodOpen] = useState(false);
 
-  const displayUser = user ?? { name: '訪客', age: '--', height: '--', weight: '--' };
+  const displayUser = isGuest
+    ? { name: '訪客', age: '--', height: '--', weight: '--' }
+    : (user ?? { name: '訪客', age: '--', height: '--', weight: '--' });
 
   const checkedMeals  = meals.filter(m => m.checked);
   const totalKcal     = checkedMeals.reduce((s, m) => s + m.kcal, 0);
@@ -67,6 +71,9 @@ export default function ProfilePage() {
 
   const toggleMeal = (id) =>
     setMeals(ms => ms.map(m => m.id === id ? { ...m, checked: !m.checked } : m));
+
+  const deleteMeal = (id) =>
+    setMeals(ms => ms.filter(m => m.id !== id));
 
   return (
     /* 外層隱藏原生滾動條，保持 BottomNav 位置穩定 */
@@ -218,8 +225,15 @@ export default function ProfilePage() {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div style={{ fontWeight: '600', fontSize: '14px', color: C.textDark }}>{meal.name}</div>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: meal.checked ? C.primary : C.textLight, flexShrink: 0, marginLeft: '6px' }}>
-                      {meal.kcal} kcal
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '6px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: meal.checked ? C.primary : C.textLight }}>
+                        {meal.kcal} kcal
+                      </div>
+                      <div onClick={() => deleteMeal(meal.id)} style={{ cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                          <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke={C.textLight} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
                   <div style={{ fontSize: '11px', color: C.textLight, marginTop: '2px' }}>
@@ -245,48 +259,30 @@ export default function ProfilePage() {
           {/* 添加食物 */}
           <div style={{ marginTop: '12px' }}>
             <div
-              onClick={() => setAddFoodOpen(o => !o)}
+              onClick={() => setAddFoodOpen(true)}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                 padding: '10px', borderRadius: '12px',
                 border: `1.5px dashed ${C.border}`,
                 cursor: 'pointer', color: C.primary, fontWeight: '600', fontSize: '14px',
-                background: addFoodOpen ? C.bgTint : 'transparent',
-                transition: 'background 0.15s',
+                background: 'transparent', transition: 'background 0.15s',
               }}
             >
               + 添加食物
             </div>
-            {addFoodOpen && (
-              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <div
-                  onClick={() => navigate(ROUTES.MAP)}
-                  style={{
-                    flex: 1, padding: '13px 10px', borderRadius: '12px',
-                    background: C.bgTint, textAlign: 'center',
-                    cursor: 'pointer', color: C.primaryDark, fontWeight: '600', fontSize: '13px',
-                    border: `1px solid ${C.border}`,
-                  }}
-                >
-                  從地圖餐廳選擇
-                </div>
-                <div
-                  style={{
-                    flex: 1, padding: '13px 10px', borderRadius: '12px',
-                    background: C.bgTint, textAlign: 'center',
-                    cursor: 'pointer', color: C.primaryDark, fontWeight: '600', fontSize: '13px',
-                    border: `1px solid ${C.border}`,
-                  }}
-                >
-                  手動輸入 / 拍照
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
       </div>
       <BottomNav />
+
+      {/* AddFood overlay */}
+      {addFoodOpen && (
+        <AddFoodSheet
+          onAdd={meal => setMeals(prev => [...prev, meal])}
+          onClose={() => setAddFoodOpen(false)}
+        />
+      )}
     </div>
   );
 }

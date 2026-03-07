@@ -1,6 +1,6 @@
 // src/pages/MapPage.jsx
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -11,6 +11,7 @@ import { useUser } from '../context/UserContext';
 import { C } from '../constants/colors';
 
 const BOTTOM_NAV_H = 58;
+const SEARCH_BAR_H = 72; // top:16 + height:48 + gap:8
 
 const RESTAURANT_COORDS = {
   1:  [22.2783, 114.1747], 2:  [22.2795, 114.1730],
@@ -47,10 +48,11 @@ const floatPill = {
 };
 
 // ── Marker icon factory ──────────────────────────────────────
-const createMarkerIcon = (restaurant, isSelected, matchCount, zoom, showName) => {
+// zoomTier: 0 = dots (<15), 1 = partial names (15-16), 2 = all names (≥16)
+const createMarkerIcon = (restaurant, isSelected, matchCount, zoomTier, showName) => {
   const fill = isSelected ? C.primaryDark : C.primary;
 
-  if (zoom < 15) {
+  if (zoomTier === 0) {
     const size = isSelected ? 13 : 8;
     return L.divIcon({
       className: '',
@@ -67,7 +69,7 @@ const createMarkerIcon = (restaurant, isSelected, matchCount, zoom, showName) =>
   return L.divIcon({
     className: '',
     html: `
-      <div style="display:inline-flex;align-items:flex-start;gap:5px;pointer-events:none;animation:markerGrow 0.25s ease-out both;">
+      <div style="display:inline-flex;align-items:flex-start;gap:5px;pointer-events:none;">
         <div style="position:relative;width:32px;height:42px;flex-shrink:0;filter:drop-shadow(0 3px 6px rgba(62,104,84,0.3));">
           <svg width="32" height="42" viewBox="0 0 32 42" fill="none">
             <path d="M16 0C7.16 0 0 7.16 0 16C0 25.5 16 42 16 42C16 42 32 25.5 32 16C32 7.16 24.84 0 16 0Z" fill="${fill}"/>
@@ -103,13 +105,14 @@ function RestaurantDetail({ restaurant, onBack }) {
   );
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: C.bg, overflow: 'hidden' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: C.bg, overflow: 'hidden', borderRadius: '24px' }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '12px',
         padding: '12px 16px 10px', flexShrink: 0,
         background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
         borderBottom: `1px solid ${C.border}`,
+        borderRadius: '24px 24px 0 0', // top rounded, bottom straight (matches container top)
       }}>
         <div
           onClick={onBack}
@@ -224,15 +227,20 @@ export default function MapPage() {
   const [panelHeight,  setPanelHeight]  = useState(null);
   const [scrollThumb,  setScrollThumb]  = useState({ top: 0, height: 0, visible: false });
   const [mapZoom,      setMapZoom]      = useState(14);
-  const [detailId,     setDetailId]     = useState(null);  // controls slide transform
-  const [displayId,    setDisplayId]    = useState(null);  // keeps content during slide-out
+  const [detailId,     setDetailId]     = useState(null);
+  const [displayId,    setDisplayId]    = useState(null);
 
-  const panelRef    = useRef(null);
-  const dragStartY  = useRef(null);
-  const dragStartH  = useRef(null);
-  const isDragging  = useRef(false);
-  const mapRef      = useRef(null);
-  const detailTimer = useRef(null);
+  const panelRef         = useRef(null);
+  const dragStartY       = useRef(null);
+  const dragStartH       = useRef(null);
+  const isDragging       = useRef(false);
+  const mapRef           = useRef(null);
+  const detailTimer      = useRef(null);
+  const prevPanelHRef    = useRef(undefined); // saves height before opening detail (undefined = not saved)
+
+  // Zoom tier: 0 = dots, 1 = partial names, 2 = all names
+  // Only changes at boundaries 15 and 16, preventing unnecessary marker redraws
+  const zoomTier = mapZoom < 15 ? 0 : mapZoom < 16 ? 1 : 2;
 
   const handleScroll = () => {
     const el = panelRef.current;
@@ -244,18 +252,59 @@ export default function MapPage() {
     setScrollThumb({ top: thumbT, height: thumbH, visible: true });
   };
 
-  const rawList     = searchQuery ? searchRestaurants(searchQuery) : getAllRestaurants();
-  const restaurants = sortRestaurants(rawList, activeFilter, userGoal);
+  const restaurants = useMemo(() =>
+    sortRestaurants(
+      searchQuery ? searchRestaurants(searchQuery) : getAllRestaurants(),
+      activeFilter,
+      userGoal
+    ),
+    [searchQuery, activeFilter, userGoal]
+  );
 
-  // Progressive name display: more names appear as zoom increases, ordered by match count
-  const allByMatch  = [...getAllRestaurants()].sort((a, b) => getMatchCount(b, userGoal) - getMatchCount(a, userGoal));
-  const nameLimit   = mapZoom >= 16 ? allByMatch.length : mapZoom >= 15 ? 3 : 0;
-  const showNameIds = new Set(allByMatch.slice(0, nameLimit).map(r => r.id));
+  const allByMatch = useMemo(() =>
+    [...getAllRestaurants()].sort((a, b) => getMatchCount(b, userGoal) - getMatchCount(a, userGoal)),
+    [userGoal]
+  );
+
+  const showNameIds = useMemo(() => {
+    const limit = zoomTier === 2 ? allByMatch.length : zoomTier === 1 ? 3 : 0;
+    return new Set(allByMatch.slice(0, limit).map(r => r.id));
+  }, [zoomTier, allByMatch]);
+
+  // Memoized marker icons — only rebuilt when zoom tier, selection, or restaurant data changes.
+  // This prevents the markerGrow animation from firing during panel drag or unrelated re-renders.
+  const markerIcons = useMemo(() => {
+    const icons = {};
+    restaurants.forEach(r => {
+      icons[r.id] = createMarkerIcon(r, selectedId === r.id, getMatchCount(r, userGoal), zoomTier, showNameIds.has(r.id));
+    });
+    return icons;
+  }, [restaurants, selectedId, userGoal, zoomTier, showNameIds]);
+
+  const getMaxPanelH = () => window.innerHeight - BOTTOM_NAV_H - 8 - SEARCH_BAR_H;
+
+  // Center the pin in the visible map area when the panel is at LOW position
+  // (between bottom of search bar and top of the default-height panel).
+  // This offset is constant regardless of whether list or detail is shown.
+  const getStableOffsetPx = () => {
+    const defaultPanelH = window.innerHeight * 0.45;
+    const visibleTop    = SEARCH_BAR_H;
+    const visibleBottom = window.innerHeight - defaultPanelH - BOTTOM_NAV_H - 8;
+    const targetY       = (visibleTop + visibleBottom) / 2;
+    // Positive offset shifts the map center southward so the pin appears above center
+    return window.innerHeight / 2 - targetY;
+  };
 
   const flyToRestaurant = (id) => {
     const coords = RESTAURANT_COORDS[id];
     if (coords && mapRef.current) {
-      mapRef.current.flyTo(coords, Math.max(mapRef.current.getZoom(), 16), { duration: 0.8 });
+      const map = mapRef.current;
+      const targetZoom = Math.max(map.getZoom(), 16);
+      const offsetPx = getStableOffsetPx();
+      const targetPoint = map.project(coords, targetZoom);
+      const adjustedPoint = L.point(targetPoint.x, targetPoint.y + offsetPx);
+      const adjustedCoords = map.unproject(adjustedPoint, targetZoom);
+      map.flyTo(adjustedCoords, targetZoom, { duration: 0.8 });
     }
   };
 
@@ -267,19 +316,20 @@ export default function MapPage() {
   const handleDragMove = (e) => {
     if (!isDragging.current) return;
     const delta = dragStartY.current - e.touches[0].clientY;
-    const maxH  = window.innerHeight - BOTTOM_NAV_H - 16;
+    const maxH  = getMaxPanelH();
     setPanelHeight(Math.max(120, Math.min(maxH, dragStartH.current + delta)));
   };
   const handleDragEnd = () => {
     isDragging.current = false;
     const minH = window.innerHeight * 0.45;
-    const maxH = window.innerHeight - BOTTOM_NAV_H - 16;
+    const maxH = getMaxPanelH();
     setPanelHeight(panelHeight > (minH + maxH) / 2 ? maxH : minH);
     dragStartY.current = null;
   };
 
   const handleMarkerClick = (id) => {
     setSelectedId(id);
+    if (!showPanel) setPanelHeight(null); // reset to LOW position when revealing from hidden
     setShowPanel(true);
     flyToRestaurant(id);
     setTimeout(() => {
@@ -296,13 +346,20 @@ export default function MapPage() {
   const handleViewDetail = (e, id) => {
     e.stopPropagation();
     clearTimeout(detailTimer.current);
+    prevPanelHRef.current = panelHeight; // save (may be null = default 45vh)
     setDisplayId(id);
     setDetailId(id);
+    setPanelHeight(getMaxPanelH());
     flyToRestaurant(id);
   };
 
   const handleBackFromDetail = () => {
     setDetailId(null);
+    // restore whatever height was saved (undefined means nothing was saved)
+    if (prevPanelHRef.current !== undefined) {
+      setPanelHeight(prevPanelHRef.current); // null restores default 45vh
+      prevPanelHRef.current = undefined;
+    }
     detailTimer.current = setTimeout(() => setDisplayId(null), 400);
   };
 
@@ -334,7 +391,7 @@ export default function MapPage() {
             <Marker
               key={r.id}
               position={coords}
-              icon={createMarkerIcon(r, selectedId === r.id, getMatchCount(r, userGoal), mapZoom, showNameIds.has(r.id))}
+              icon={markerIcons[r.id]}
               eventHandlers={{ click: () => handleMarkerClick(r.id) }}
             />
           );
@@ -364,6 +421,7 @@ export default function MapPage() {
           height: panelHeight ?? '45vh',
           zIndex: 1000,
           overflow: 'hidden',
+          borderRadius: '24px',
           transition: isDragging.current ? 'none' : 'height 0.28s cubic-bezier(0.4,0,0.2,1)',
           pointerEvents: 'none',
         }}>

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Input } from 'antd-mobile';
 import { useUser } from '../context/UserContext';
 import { mockSignup } from '../services/userService';
 import { ROUTES } from '../constants/routes';
@@ -19,27 +18,39 @@ const DIETARY_OPTIONS = [
   { label: '堅果過敏', value: '堅果過敏' },
 ];
 
-const Label = ({ children }) => (
-  <div style={{ fontSize: '12px', fontWeight: '500', color: C.textLight,
-    letterSpacing: '0.04em', marginBottom: '7px', marginTop: '12px' }}>
+// Section header with left accent bar
+const SectionLabel = ({ children }) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '18px', marginTop: '28px' }}>
+    <div style={{ width: '3px', height: '18px', borderRadius: '2px', background: C.primary, flexShrink: 0 }} />
+    <span style={{ fontSize: '13px', fontWeight: '700', color: C.primaryDark, letterSpacing: '0.04em' }}>
+      {children}
+    </span>
+  </div>
+);
+
+// Field label sitting above input
+const FieldLabel = ({ children }) => (
+  <div style={{ fontSize: '12px', fontWeight: '600', color: C.textLight, letterSpacing: '0.03em', marginBottom: '7px', marginTop: '14px' }}>
     {children}
   </div>
 );
 
-const inputStyle = {
-  '--background': C.bgTint,
-  '--border-radius': '12px',
-  '--height': '44px',
-  '--font-size': '15px',
-  '--color': C.textDark,
-  '--placeholder-color': C.textLight,
-  '--border-bottom': 'none',
-  padding: '0 14px',
-  borderRadius: '12px',
-  background: C.bgTint,
-  border: 'none',
-  outline: 'none',
-};
+// Rounded pill input
+const PillInput = ({ type = 'text', placeholder, value, onChange }) => (
+  <input
+    type={type}
+    placeholder={placeholder}
+    value={value}
+    onChange={e => onChange(e.target.value)}
+    style={{
+      width: '100%', boxSizing: 'border-box',
+      background: C.bgTint, border: 'none', outline: 'none',
+      borderRadius: '14px', padding: '13px 16px',
+      fontSize: '15px', color: C.textDark,
+      fontFamily: 'inherit',
+    }}
+  />
+);
 
 export default function Signup() {
   const navigate = useNavigate();
@@ -70,53 +81,43 @@ export default function Signup() {
   };
 
   return (
-    <div style={{
-      maxWidth: '450px', margin: '0 auto', minHeight: '100dvh',
+    <div className="hide-scrollbar" style={{
+      maxWidth: '450px', margin: '0 auto', height: '100dvh', overflowY: 'auto',
       background: `linear-gradient(160deg, ${C.bg} 0%, ${C.bgTint} 100%)`,
-      padding: '32px 20px 48px',
+      padding: '40px 20px 56px',
     }}>
 
       {/* 標題 */}
-      <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-        <div style={{ fontSize: '26px', fontWeight: '700', color: C.primaryDark, lineHeight: 1.2 }}>
+      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <div style={{ fontSize: '28px', fontWeight: '700', color: C.primaryDark, lineHeight: 1.15 }}>
           建立你的檔案
         </div>
-        <div style={{ fontSize: '14px', color: C.textLight, marginTop: '6px' }}>
+        <div style={{ fontSize: '14px', color: C.textLight, marginTop: '8px', lineHeight: 1.6 }}>
           幫助我們為你推薦最適合的餐廳
         </div>
       </div>
 
       {/* 卡片 */}
       <div style={{
-        background: 'rgba(255,255,255,0.9)', borderRadius: '24px',
-        padding: '24px 20px', backdropFilter: 'blur(12px)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+        background: 'rgba(255,255,255,0.92)', borderRadius: '28px',
+        padding: '24px 20px 28px', backdropFilter: 'blur(12px)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.07)',
       }}>
 
         {/* ── 帳戶信息 ── */}
-        <div style={{ fontSize: '11px', fontWeight: '600', color: C.primary,
-          letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '14px' }}>
-          帳戶信息
-        </div>
+        <SectionLabel>帳戶信息</SectionLabel>
 
-        <Label>姓名</Label>
-        <Input placeholder="請輸入姓名" value={form.name}
-          onChange={v => set('name', v)} style={inputStyle} />
+        <FieldLabel>姓名</FieldLabel>
+        <PillInput placeholder="請輸入姓名" value={form.name} onChange={v => set('name', v)} />
 
-        <Label>電郵</Label>
-        <Input placeholder="請輸入電郵" value={form.email}
-          onChange={v => set('email', v)} style={inputStyle} />
+        <FieldLabel>電郵</FieldLabel>
+        <PillInput type="email" placeholder="請輸入電郵" value={form.email} onChange={v => set('email', v)} />
 
-        <Label>密碼</Label>
-        <Input type="password" placeholder="至少 6 位字符" value={form.password}
-          onChange={v => set('password', v)} style={inputStyle} />
+        <FieldLabel>密碼</FieldLabel>
+        <PillInput type="password" placeholder="至少 6 位字符" value={form.password} onChange={v => set('password', v)} />
 
         {/* ── 健身目標 ── */}
-        <div style={{ width: '100%', height: '1px', background: C.border, margin: '22px 0 18px' }} />
-        <div style={{ fontSize: '11px', fontWeight: '600', color: C.primary,
-          letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '14px' }}>
-          健身目標
-        </div>
+        <SectionLabel>健身目標</SectionLabel>
 
         <div style={{ display: 'flex', gap: '10px' }}>
           {HEALTH_GOALS.map(g => (
@@ -124,12 +125,11 @@ export default function Signup() {
               key={g}
               onClick={() => set('goal', g)}
               style={{
-                flex: 1, textAlign: 'center', padding: '11px 6px',
+                flex: 1, textAlign: 'center', padding: '12px 6px',
                 borderRadius: '14px', cursor: 'pointer',
                 background: form.goal === g ? C.primary : C.bgTint,
                 color: form.goal === g ? 'white' : C.textLight,
                 fontSize: '14px', fontWeight: form.goal === g ? '600' : '400',
-                border: `1.5px solid ${form.goal === g ? C.primary : 'transparent'}`,
                 transition: 'all 0.15s',
               }}
             >
@@ -138,42 +138,30 @@ export default function Signup() {
           ))}
         </div>
 
-        <Label>目標體重 (kg)（可選）</Label>
-        <Input type="number" placeholder="例如 70" value={form.targetWeight}
-          onChange={v => set('targetWeight', v)} style={inputStyle} />
+        <FieldLabel>目標體重 (kg)（可選）</FieldLabel>
+        <PillInput type="number" placeholder="例如 70" value={form.targetWeight} onChange={v => set('targetWeight', v)} />
 
         {/* ── 身體數據 ── */}
-        <div style={{ width: '100%', height: '1px', background: C.border, margin: '22px 0 18px' }} />
-        <div style={{ fontSize: '11px', fontWeight: '600', color: C.primary,
-          letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '14px' }}>
-          身體數據
-        </div>
+        <SectionLabel>身體數據</SectionLabel>
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <div style={{ flex: 1 }}>
-            <Label>年齡</Label>
-            <Input type="number" placeholder="25" value={form.age}
-              onChange={v => set('age', v)} style={inputStyle} />
+            <FieldLabel>年齡</FieldLabel>
+            <PillInput type="number" placeholder="25" value={form.age} onChange={v => set('age', v)} />
           </div>
           <div style={{ flex: 1 }}>
-            <Label>身高 (cm)</Label>
-            <Input type="number" placeholder="168" value={form.height}
-              onChange={v => set('height', v)} style={inputStyle} />
+            <FieldLabel>身高 (cm)</FieldLabel>
+            <PillInput type="number" placeholder="168" value={form.height} onChange={v => set('height', v)} />
           </div>
           <div style={{ flex: 1 }}>
-            <Label>體重 (kg)</Label>
-            <Input type="number" placeholder="65" value={form.weight}
-              onChange={v => set('weight', v)} style={inputStyle} />
+            <FieldLabel>體重 (kg)</FieldLabel>
+            <PillInput type="number" placeholder="65" value={form.weight} onChange={v => set('weight', v)} />
           </div>
         </div>
 
         {/* ── 飲食需求 ── */}
-        <div style={{ width: '100%', height: '1px', background: C.border, margin: '22px 0 18px' }} />
-        <div style={{ fontSize: '11px', fontWeight: '600', color: C.primary,
-          letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '6px' }}>
-          特定飲食需求
-        </div>
-        <div style={{ fontSize: '12px', color: C.textLight, marginBottom: '14px' }}>
+        <SectionLabel>特定飲食需求</SectionLabel>
+        <div style={{ fontSize: '12px', color: C.textLight, marginTop: '-10px', marginBottom: '14px' }}>
           可多選，我們會優先推薦符合你需求的餐廳
         </div>
 
@@ -185,11 +173,10 @@ export default function Signup() {
                 key={opt.value}
                 onClick={() => toggleDietary(opt.value)}
                 style={{
-                  padding: '7px 15px', borderRadius: '20px', cursor: 'pointer',
+                  padding: '7px 16px', borderRadius: '20px', cursor: 'pointer',
                   fontSize: '13px', fontWeight: active ? '600' : '400',
                   background: active ? C.primary : C.bgTint,
                   color: active ? 'white' : C.textLight,
-                  border: `1.5px solid ${active ? C.primary : 'transparent'}`,
                   transition: 'all 0.15s',
                 }}
               >
@@ -202,7 +189,7 @@ export default function Signup() {
         {/* 錯誤提示 */}
         {error && (
           <div style={{ color: '#B85C4A', fontSize: '13px', textAlign: 'center',
-            marginTop: '16px', padding: '10px', background: '#FDF0EE', borderRadius: '10px' }}>
+            marginTop: '18px', padding: '10px 14px', background: '#FDF0EE', borderRadius: '12px' }}>
             {error}
           </div>
         )}
@@ -211,17 +198,17 @@ export default function Signup() {
         <div
           onClick={handleSignup}
           style={{
-            marginTop: '24px', width: '100%', padding: '14px',
-            background: C.primary, color: 'white', borderRadius: '14px',
+            marginTop: '28px', width: '100%', padding: '15px',
+            background: C.primary, color: 'white', borderRadius: '16px',
             textAlign: 'center', fontSize: '16px', fontWeight: '600',
             cursor: 'pointer', letterSpacing: '0.02em',
-            boxShadow: `0 4px 16px rgba(107,144,128,0.35)`,
+            boxShadow: `0 4px 18px rgba(107,144,128,0.35)`,
           }}
         >
           完成設置，開始使用
         </div>
 
-        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+        <div style={{ marginTop: '18px', textAlign: 'center' }}>
           <span style={{ fontSize: '13px', color: C.textLight }}>已有帳戶？</span>
           <span
             onClick={() => navigate(ROUTES.LOGIN)}
