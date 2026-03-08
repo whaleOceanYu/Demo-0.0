@@ -13,21 +13,36 @@ import { C } from '../constants/colors';
 const BOTTOM_NAV_H = 58;
 const SEARCH_BAR_H = 72; // top:16 + height:48 + gap:8
 
+// 真實經緯度（來源：RestaurantInfo 3.8 updated.xlsx）
 const RESTAURANT_COORDS = {
-  1:  [22.2783, 114.1747], 2:  [22.2795, 114.1730],
-  3:  [22.2810, 114.1762], 4:  [22.2770, 114.1742],
-  5:  [22.2825, 114.1720], 6:  [22.2760, 114.1780],
-  7:  [22.2800, 114.1700], 8:  [22.2815, 114.1770],
-  9:  [22.2790, 114.1690], 10: [22.2775, 114.1758],
-  11: [22.2830, 114.1742], 12: [22.2765, 114.1722],
-  13: [22.2805, 114.1712], 14: [22.2785, 114.1782],
-  15: [22.2820, 114.1752], 16: [22.2755, 114.1732],
+  1:  [22.2811627786248, 114.17288748889],   // 港灣茶餐廳
+  2:  [22.2817723990418, 114.173920192124],  // 中庭
+  3:  [22.2845424998463, 114.176973617901],  // 意日閣
+  4:  [22.281623030676,  114.174014269771],  // 港灣道 Café
+  5:  [22.280442821998,  114.172028529175],  // Giá Trattoria Italiana
+  6:  [22.2777342789581, 114.175488888331],  // 甘牌燒鵝
+  7:  [22.2765205259857, 114.172001636671],  // Sophia Loren Pizzeria
+  8:  [22.2763103857287, 114.173256736671],  // ULURU.HK
+  9:  [22.2779499556311, 114.179787053866],  // 陳家廚房
+  10: [22.2798101091246, 114.179058823179],  // 阿仔廚房
+  11: [22.2760350468236, 114.173454797207],  // The Pasta Shack
+  12: [22.2771144811465, 114.171939752015],  // Feather & Bone
+  13: [22.2793211260718, 114.177827990107],  // TANGRAM Bistro & Bar
+  14: [22.2804192691747, 114.177087984553],  // DiVino Patio
+  15: [22.2790693497488, 114.177058738522],  // Pepino意大利餐廳
+  16: [22.2764962698038, 114.176346973394],  // 新嚐泰泰國餐廳
 };
 
 const getMatchCount = (restaurant, goal) => {
-  if (goal === '增肌') return restaurant.dishes.filter(d => d.protein > 20).length;
-  if (goal === '減脂') return restaurant.dishes.filter(d => d.fat < 10).length;
-  return restaurant.dishes.length;
+  return restaurant.dishes.filter(d => {
+    const k = d.protein * 4 + d.fat * 9 + d.carbs * 4;
+    const pct = d.protein * 4 / k;
+    const gainOk = d.protein >= 28 && pct >= 0.22;
+    const loseOk = pct >= 0.18 && d.fat < 22 && k < 550;
+    if (goal === '增肌') return gainOk;
+    if (goal === '減脂') return loseOk;
+    return gainOk || loseOk; // 保持體重 = 兩者取並集
+  }).length;
 };
 
 const sortRestaurants = (list, filter, userGoal) => {
@@ -96,111 +111,232 @@ function MapController({ setZoom, mapRef }) {
   return null;
 }
 
+// ── 推薦等級計算（增肌／減脂）────────────────────────────────
+// tier 2 = 高度推薦，tier 1 = 較推薦，tier 0 = 不推薦
+function getDishTier(dish, isGain) {
+  const k = dish.protein * 4 + dish.fat * 9 + dish.carbs * 4;
+  const proteinPct = dish.protein * 4 / k; // 蛋白質佔熱量比例
+  if (isGain) {
+    // 增肌：優先蛋白質絕對量 + 蛋白佔比（避免高脂高蛋白混淆）
+    if (dish.protein >= 35 && proteinPct >= 0.28) return 2;
+    if (dish.protein >= 28 && proteinPct >= 0.22) return 1;
+  } else {
+    // 減脂：需同時滿足「足夠蛋白護肌」+「低脂」+「總熱量合理」
+    // 純低卡但缺乏蛋白（甜品、麵食）不應推薦
+    if (proteinPct >= 0.26 && dish.fat <= 18 && k < 480) return 2;
+    if (proteinPct >= 0.18 && dish.fat < 22 && k < 550) return 1;
+  }
+  return 0;
+}
+
 // ── Inline restaurant detail panel ──────────────────────────
-function RestaurantDetail({ restaurant, onBack }) {
-  const [activeTab, setActiveTab] = useState('增肌');
+function RestaurantDetail({ restaurant, onBack, userGoal }) {
+  const initTab = userGoal === '減脂' ? '減脂' : '增肌';
+  const [activeTab, setActiveTab] = useState(initTab);
   const isGain = activeTab === '增肌';
-  const sortedDishes = [...restaurant.dishes].sort((a, b) =>
-    isGain ? b.protein - a.protein : a.fat - b.fat
-  );
+  const kcal = d => d.protein * 4 + d.fat * 9 + d.carbs * 4;
+
+  // 先按推薦等級降序，同等級內再按主要指標排序
+  const sortedDishes = [...restaurant.dishes].sort((a, b) => {
+    const ta = getDishTier(a, isGain), tb = getDishTier(b, isGain);
+    if (tb !== ta) return tb - ta;
+    return isGain ? b.protein - a.protein : kcal(a) - kcal(b);
+  });
+
+  const distLabel = restaurant.distance != null
+    ? (restaurant.distance < 1000 ? restaurant.distance + 'm' : (restaurant.distance / 1000).toFixed(1) + 'km')
+    : null;
+
+  const isUserPlanTab = (tab) =>
+    (userGoal === '增肌' && tab === '增肌') ||
+    (userGoal === '減脂' && tab === '減脂');
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: C.bg, overflow: 'hidden', borderRadius: '24px' }}>
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '12px',
-        padding: '12px 16px 10px', flexShrink: 0,
+        flexShrink: 0,
         background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)',
         borderBottom: `1px solid ${C.border}`,
-        borderRadius: '24px 24px 0 0', // top rounded, bottom straight (matches container top)
+        borderRadius: '24px 24px 0 0',
+        padding: '10px 14px 10px',
       }}>
-        <div
-          onClick={onBack}
-          style={{
-            width: '32px', height: '32px', borderRadius: '50%',
-            background: C.bgTint, border: `1px solid ${C.border}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', flexShrink: 0,
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke={C.primaryDark} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: '700', fontSize: '16px', color: C.primaryDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {restaurant.name}
+        {/* Back button left, all info to its right */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div
+            onClick={onBack}
+            style={{
+              width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0,
+              background: C.bgTint, border: `1px solid ${C.border}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+              stroke={C.primaryDark} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
           </div>
-          <div style={{ fontSize: '12px', color: C.textLight, marginTop: '1px' }}>
-            {restaurant.cuisine} · {restaurant.priceRange}
+
+          {/* Info block */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {/* Name + cuisine/price/dist + Maps button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ fontWeight: '700', fontSize: '15px', color: C.primaryDark, lineHeight: 1.3, flexShrink: 0 }}>
+                {restaurant.name}
+              </div>
+              <div style={{ fontSize: '11px', color: C.textLight, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {restaurant.cuisine} · {restaurant.priceRange}{distLabel && ` · ${distLabel}`}
+              </div>
+              {restaurant.googleMapsUrl && (
+                <a href={restaurant.googleMapsUrl} target="_blank" rel="noopener noreferrer"
+                  style={{
+                    flexShrink: 0, width: '26px', height: '26px', borderRadius: '50%',
+                    background: C.bgTint, border: `1px solid ${C.border}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    textDecoration: 'none',
+                  }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke={C.primaryDark} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                  </svg>
+                </a>
+              )}
+            </div>
+
+            {/* Phone + address pills */}
+            {(restaurant.phone || restaurant.address) && (
+              <div style={{ display: 'flex', gap: '5px', marginTop: '6px', overflow: 'hidden' }}>
+                {restaurant.phone && (
+                  <a href={`tel:${restaurant.phone}`} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '3px',
+                    background: C.bgTint, borderRadius: '20px', padding: '3px 8px',
+                    fontSize: '10px', color: C.primaryDark, textDecoration: 'none', flexShrink: 0,
+                    border: `1px solid ${C.border}`,
+                  }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.42 2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 6 6l.91-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16z"/>
+                    </svg>
+                    {restaurant.phone}
+                  </a>
+                )}
+                {restaurant.address && (
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '3px',
+                    background: C.bgTint, borderRadius: '20px', padding: '3px 8px',
+                    fontSize: '10px', color: C.textLight, minWidth: 0, flex: 1,
+                    border: `1px solid ${C.border}`,
+                  }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                    </svg>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {restaurant.address}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Tab selector */}
-      <div style={{ display: 'flex', gap: '8px', padding: '10px 14px 8px', flexShrink: 0, background: 'rgba(255,255,255,0.85)' }}>
+      {/* ── Tab selector ── */}
+      <div style={{ display: 'flex', gap: '8px', padding: '8px 12px 6px', flexShrink: 0, background: 'rgba(255,255,255,0.85)' }}>
         {['增肌', '減脂'].map(tab => (
           <div
             key={tab}
             onClick={() => setActiveTab(tab)}
             style={{
-              flex: 1, textAlign: 'center', padding: '8px 0', borderRadius: '12px',
-              cursor: 'pointer', fontSize: '13px',
+              flex: 1, textAlign: 'center', padding: '7px 0', borderRadius: '999px',
+              cursor: 'pointer',
               fontWeight: activeTab === tab ? '600' : '400',
               background: activeTab === tab ? C.primary : C.bgTint,
               color: activeTab === tab ? 'white' : C.textLight,
               transition: 'all 0.15s',
             }}
           >
-            {tab === '增肌' ? '🍗 增肌推薦' : '🥗 減脂推薦'}
+            {tab === '增肌' ? (
+              <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M6.5 6.5h11M6.5 17.5h11M4 9.5H2m20 0h-2M4 14.5H2m20 0h-2M4 9.5v5M20 9.5v5"/>
+                  </svg>
+                  增肌推薦
+                </span>
+                {isUserPlanTab('增肌') && <span style={{ position: 'absolute', left: '100%', marginLeft: '3px', fontSize: '9px', opacity: 0.85, whiteSpace: 'nowrap' }}>(你的方案)</span>}
+              </span>
+            ) : (
+              <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2a9 9 0 0 1 9 9c0 4.17-2.84 7.67-6.7 8.66C13.55 21.1 12.8 22 12 22s-1.55-.9-2.3-2.34A9 9 0 0 1 12 2z"/>
+                    <path d="M12 2c-2 4-2 8 0 14"/>
+                  </svg>
+                  減脂推薦
+                </span>
+                {isUserPlanTab('減脂') && <span style={{ position: 'absolute', left: '100%', marginLeft: '3px', fontSize: '9px', opacity: 0.85, whiteSpace: 'nowrap' }}>(你的方案)</span>}
+              </span>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Dish list */}
+      {/* ── Dish list ── */}
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '8px 12px 12px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {sortedDishes.map(dish => {
-            const highlight = isGain ? dish.protein > 20 : dish.fat < 10;
+            const dishKcal = kcal(dish);
+            const tier = getDishTier(dish, isGain);
             return (
               <div
                 key={dish.id}
                 style={{
                   borderRadius: '14px', padding: '10px 12px',
-                  background: highlight ? 'rgba(107,144,128,0.09)' : 'rgba(255,255,255,0.9)',
-                  border: `1.5px solid ${highlight ? C.primaryTint : 'transparent'}`,
+                  background: tier === 2 ? 'rgba(107,144,128,0.10)' : tier === 1 ? 'rgba(107,144,128,0.04)' : 'rgba(255,255,255,0.9)',
+                  border: `1.5px solid ${tier > 0 ? C.primaryTint : 'transparent'}`,
                   backdropFilter: 'blur(8px)',
-                  display: 'flex', gap: '10px', alignItems: 'center',
+                  display: 'flex', gap: '10px', alignItems: 'flex-start',
                 }}
               >
-                {/* Dish image placeholder */}
+                {/* Dish image */}
                 <div style={{
                   width: '48px', height: '48px', borderRadius: '10px', flexShrink: 0,
                   background: `linear-gradient(135deg, ${C.primaryTint}, ${C.bgTint})`,
+                  overflow: 'hidden',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '18px', fontWeight: '700', color: C.primary,
                 }}>
-                  {dish.name[0]}
+                  {dish.image
+                    ? <img src={dish.image} alt={dish.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ fontSize: '18px', fontWeight: '700', color: C.primary }}>{dish.name[0]}</span>
+                  }
                 </div>
+
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: '600', fontSize: '13px', color: C.textDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '58%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                    <span style={{ fontWeight: '600', fontSize: '13px', color: C.textDark, lineHeight: 1.3, flex: 1, minWidth: 0 }}>
                       {dish.name}
                     </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
-                      {highlight && (
-                        <span style={{ fontSize: '10px', fontWeight: '600', color: 'white', background: C.accent, borderRadius: '8px', padding: '2px 6px' }}>
-                          {isGain ? '高蛋白' : '低脂'}
-                        </span>
-                      )}
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: C.accent }}>${dish.price}</span>
-                    </div>
+                    <span style={{ fontSize: '12px', fontWeight: '700', color: C.accent, flexShrink: 0 }}>${dish.price}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '3px' }}>
+                    <span style={{ fontSize: '11px', color: C.textLight }}>{dishKcal} kcal</span>
+                    {tier === 2 && (
+                      <span style={{ fontSize: '9px', fontWeight: '700', color: 'white', background: C.primary, borderRadius: '8px', padding: '2px 6px', letterSpacing: '0.02em' }}>
+                        高度推薦
+                      </span>
+                    )}
+                    {tier === 1 && (
+                      <span style={{ fontSize: '9px', fontWeight: '600', color: C.primary, background: C.primaryTint, borderRadius: '8px', padding: '2px 6px' }}>
+                        較推薦
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
-                    {[['蛋白', dish.protein + 'g', C.primary], ['脂肪', dish.fat + 'g', C.accent], ['碳水', dish.carbs + 'g', C.textLight]].map(([l, v, c]) => (
+                    {[['蛋白', dish.protein, C.primary], ['脂肪', dish.fat, C.accent], ['碳水', dish.carbs, C.textLight]].map(([l, v, c]) => (
                       <span key={l} style={{ fontSize: '11px', color: C.textLight }}>
-                        <span style={{ fontWeight: '600', color: c }}>{v}</span> {l}
+                        <span style={{ fontWeight: '600', color: c }}>{v}g</span> {l}
                       </span>
                     ))}
                   </div>
@@ -551,14 +687,17 @@ export default function MapPage() {
                         >
                           <div style={{ display: 'flex', gap: '11px', alignItems: 'center' }}>
 
-                            {/* Image placeholder */}
+                            {/* Restaurant image */}
                             <div style={{
                               width: '64px', height: '64px', borderRadius: '12px', flexShrink: 0,
                               background: `linear-gradient(135deg, ${C.primaryTint}, ${C.bgTint})`,
+                              overflow: 'hidden',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: '22px', fontWeight: '700', color: C.primary,
                             }}>
-                              {r.name[0]}
+                              {r.image
+                                ? <img src={r.image} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                : <span style={{ fontSize: '22px', fontWeight: '700', color: C.primary }}>{r.name[0]}</span>
+                              }
                             </div>
 
                             {/* Info area */}
@@ -579,9 +718,10 @@ export default function MapPage() {
                                 </div>
                               </div>
 
-                              {/* Row 2: cuisine · price */}
+                              {/* Row 2: cuisine · price · distance */}
                               <div style={{ fontSize: '12px', color: C.textLight, marginTop: '3px' }}>
                                 {r.cuisine} · {r.priceRange}
+                                {r.distance != null && ` · ${r.distance < 1000 ? r.distance + 'm' : (r.distance / 1000).toFixed(1) + 'km'}`}
                               </div>
 
                               {/* Row 3: match count + 查看詳情 button */}
@@ -638,6 +778,7 @@ export default function MapPage() {
                 <RestaurantDetail
                   restaurant={detailRestaurant}
                   onBack={handleBackFromDetail}
+                  userGoal={userGoal}
                 />
               )}
             </div>

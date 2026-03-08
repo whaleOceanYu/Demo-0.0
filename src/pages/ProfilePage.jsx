@@ -143,9 +143,9 @@ export default function ProfilePage() {
                       {kcalExceeded ? `+${-remainingKcal}` : remainingKcal}
                       <span style={{ fontSize: '9px', fontWeight: '400', marginLeft: '1px' }}>kcal</span>
                     </div>
-                    <div style={{ fontSize: '10px', color: kcalExceeded ? C.accent : C.textLight, marginTop: '2px' }}>
-                      {kcalExceeded ? '超出' : '剩餘'}
-                    </div>
+                    {kcalExceeded && (
+                      <div style={{ fontSize: '10px', color: C.accent, marginTop: '2px' }}>超出</div>
+                    )}
                   </div>
                 </ProgressCircle>
               </div>
@@ -180,10 +180,13 @@ export default function ProfilePage() {
                   <div style={{
                     width: '44px', height: '44px', borderRadius: '10px', flexShrink: 0,
                     background: `linear-gradient(135deg, ${C.primaryTint}, ${C.bgTint})`,
+                    overflow: 'hidden',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '16px', fontWeight: '700', color: C.primary,
                   }}>
-                    {r.name[0]}
+                    {r.image
+                      ? <img src={r.image} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span style={{ fontSize: '16px', fontWeight: '700', color: C.primary }}>{r.name[0]}</span>
+                    }
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: '600', fontSize: '14px', color: C.textDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

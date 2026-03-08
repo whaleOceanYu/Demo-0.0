@@ -38,15 +38,36 @@ export default function Login() {
       flexDirection: 'column',
       justifyContent: 'center',
       background: C.bg,
+      position: 'relative',
+      overflow: 'hidden',
     }}>
+      {/* Full-page ghost logo background */}
+      <img
+        src="/logo.png"
+        alt=""
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '320px',
+          objectFit: 'contain',
+          filter: 'brightness(0) invert(1)',
+          opacity: 0.08,
+          pointerEvents: 'none',
+          userSelect: 'none',
+        }}
+      />
       {/* Logo */}
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '36px', color: C.primaryDark, marginBottom: '8px', fontWeight: 700, letterSpacing: '-0.5px' }}>
-          ProteinMap
+      <div style={{ textAlign: 'center', marginBottom: '32px', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <img
+          src="/logo.png"
+          alt="logo"
+          style={{ width: '72px', height: '72px', objectFit: 'contain', marginBottom: '12px' }}
+        />
+        <h1 style={{ fontSize: '36px', color: C.primaryDark, margin: 0, fontWeight: 700, letterSpacing: '-0.5px' }}>
+          Protein Map
         </h1>
-        <p style={{ color: C.textLight, fontSize: '16px', fontWeight: 400 }}>
-          Track. Fuel. Perform.
-        </p>
       </div>
 
       {/* 白色卡片 */}

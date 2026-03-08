@@ -10,7 +10,7 @@
 // 類比 Python：這相當於一個 RestaurantRepository 類，
 //   封裝了所有對「餐廳數據庫」的查詢操作。
 
-import { restaurants as mockData } from '../data';
+import { restaurants as mockData } from '../data/restaurants';
 
 // 獲取所有餐廳（用於 MapPage 列表）
 export function getAllRestaurants() {

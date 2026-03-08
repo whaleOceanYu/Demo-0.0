@@ -20,24 +20,18 @@ const calcKcal = (p, f, c) =>
 
 // ── AI 估算（DashScope / Qwen，name 必填，photoSrc 可選）────
 async function analyzeFood(name, photoSrc) {
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('NO_KEY');
-
   const prompt = `估算「${name}」每份（約一人份）的蛋白質、脂肪、碳水化合物。${photoSrc ? '請結合圖片中的食物判斷份量。' : ''}只返回 JSON，不含其他文字，格式：{"protein":整數,"fat":整數,"carbs":整數}`;
 
-  // 有圖片：用 qwen-vl-plus（視覺模型），需數組格式
+  // 有圖片：用 qwen3-vl-plus（視覺模型），需數組格式
   // 無圖片：用 qwen-turbo（純文字），接受字符串
-  const model   = photoSrc ? 'qwen-vl-plus' : 'qwen-turbo';
+  const model   = photoSrc ? 'qwen3-vl-plus' : 'qwen-turbo';
   const content = photoSrc
     ? [{ type: 'image_url', image_url: { url: photoSrc } }, { type: 'text', text: prompt }]
     : prompt;
 
   const res = await fetch('/api/qwen/v1/chat/completions', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model,
       max_tokens: 128,
@@ -50,10 +44,13 @@ async function analyzeFood(name, photoSrc) {
     throw new Error(err?.error?.message || `HTTP ${res.status}`);
   }
   const data = await res.json();
-  const text = data.choices?.[0]?.message?.content ?? '';
+  const messageContent = data.choices?.[0]?.message?.content;
+  const text = Array.isArray(messageContent)
+    ? messageContent.map(p => (typeof p === 'string' ? p : p?.text || '')).join('\n')
+    : String(messageContent ?? '');
   // 提取 JSON（模型可能用 markdown 代碼塊包裹）
   const match = text.match(/\{[\s\S]*?\}/);
-  if (!match) throw new Error(`回應格式異常：${text.slice(0, 60)}`);
+  if (!match) throw new Error(`回應格式異常：${text.slice(0, 80)}`);
   return JSON.parse(match[0]);
 }
 
@@ -209,9 +206,12 @@ export default function AddFoodSheet({ onAdd, onClose }) {
       }));
       setAnalyzed(true);
     } catch (err) {
-      setAiError(err.message === 'NO_KEY'
-        ? '未配置 VITE_ANTHROPIC_API_KEY，請手動填寫數據'
-        : `估算失敗：${err.message}`);
+      const msg = String(err?.message || '');
+      if (msg.includes('Incorrect API key provided')) {
+        setAiError('估算失敗：DashScope API Key 無效，請檢查 Key 與 DASHSCOPE_BASE_URL 區域是否一致');
+      } else {
+        setAiError(`估算失敗：${msg}`);
+      }
     } finally {
       setAnalyzing(false);
     }
@@ -347,10 +347,13 @@ export default function AddFoodSheet({ onAdd, onClose }) {
                     <div style={{
                       width: '40px', height: '40px', borderRadius: '10px', flexShrink: 0,
                       background: `linear-gradient(135deg, ${C.primaryTint}, ${C.bgTint})`,
+                      overflow: 'hidden',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '16px', fontWeight: '700', color: C.primary,
                     }}>
-                      {r.name[0]}
+                      {r.image
+                        ? <img src={r.image} alt={r.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : <span style={{ fontSize: '16px', fontWeight: '700', color: C.primary }}>{r.name[0]}</span>
+                      }
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: '600', fontSize: '14px', color: C.primaryDark, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
