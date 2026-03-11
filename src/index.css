@@ -73,6 +73,16 @@ button:hover {
   backdrop-filter: blur(5px);
 }
 
+/* 防止 iOS Safari 在 focus input 時自動放大頁面（需 font-size >= 16px） */
+input,
+textarea,
+select,
+.adm-input-element,
+.adm-search-bar-input,
+.adm-text-area-element {
+  font-size: 16px !important;
+}
+
 /* 隱藏滾動條（用於地圖頁底部卡片條） */
 .hide-scrollbar {
   scrollbar-width: none;        /* Firefox */
