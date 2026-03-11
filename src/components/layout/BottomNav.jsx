@@ -29,7 +29,7 @@ const TABS = [
     key: ROUTES.MAP,
     title: '地圖',
     icon: (active) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
         <path
           d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
           fill={active ? C.primary : 'none'}
@@ -44,7 +44,7 @@ const TABS = [
     key: ROUTES.FRIENDS,
     title: '好友',
     icon: (active) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
         <circle cx="9" cy="8" r="3.2"
           fill={active ? C.primary : 'none'}
           stroke={active ? C.primary : C.textLight}
@@ -69,7 +69,7 @@ const TABS = [
     key: ROUTES.PROFILE,
     title: '個人檔案',
     icon: (active) => (
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" style={{ display: 'block' }}>
         <circle
           cx="12" cy="8" r="4"
           fill={active ? C.primary : 'none'}
@@ -111,6 +111,7 @@ export default function BottomNav() {
       borderTop: `1px solid ${C.border}`,
       borderRadius: '20px 20px 0 0',
       boxShadow: '0 -2px 16px rgba(74,88,130,0.08)',
+      paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
       {/* TabBar：antd-mobile 的選項卡容器
             activeKey：當前激活的 key（= location.pathname，即 URL 路徑）
@@ -133,7 +134,7 @@ export default function BottomNav() {
               icon={tab.icon(active)}
               title={
                 <span style={{
-                  fontSize: '12px',
+                  fontSize: '13px',
                   fontWeight: active ? '600' : '400',
                   color: active ? C.primary : C.textLight,
                 }}>
