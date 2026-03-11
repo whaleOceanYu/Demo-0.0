@@ -77,10 +77,16 @@ button:hover {
 input,
 textarea,
 select,
+[type="text"],
+[type="search"],
+[type="number"],
+[type="email"],
+[type="password"],
 .adm-input-element,
 .adm-search-bar-input,
 .adm-text-area-element {
   font-size: 16px !important;
+  --adm-font-size-main: 16px;
 }
 
 /* 隱藏滾動條（用於地圖頁底部卡片條） */
