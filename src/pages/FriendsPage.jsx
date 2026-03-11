@@ -1,3 +1,11 @@
+// ═══════════════════════════════════════════════════════════════
+// src/pages/FriendsPage.jsx  ──  好友頁面（目前為靜態展示 UI）
+//
+// 【功能】①好友動態 ②本週打卡排行  ——全部靜態 Mock 數據
+// 【訪客模式】isGuest=true 時隱藏列表和排行榜，只保留操作按鈕
+// 【注意】尚無社交後端，按鈕點擊目前沒有綁定任何操作。
+// ═══════════════════════════════════════════════════════════════
+
 import { RightOutline } from 'antd-mobile-icons';
 import BottomNav from '../components/layout/BottomNav';
 import { useUser } from '../context/UserContext';

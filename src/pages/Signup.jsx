@@ -1,3 +1,19 @@
+// ═══════════════════════════════════════════════════════════════
+// src/pages/Signup.jsx  ──  新用戶注冊頁面
+//
+// 讓新用戶填寫個人資料（姓名、電郵、密碼、健身目標、身體數據、飲食需求），
+// 完成後自動登錄並跳轉到地圖頁。
+//
+// 【組件複用】
+//   SectionLabel、FieldLabel、PillInput 是本文件內部的小組件，
+//   避免重複的 style 代碼——類比 C 裡封裝重複的 printf 格式。
+//
+// 【表單狀態】
+//   所有字段存在一個 form 對象 state 裡：
+//   const [form, setForm] = useState({name:'', email:'', ...})
+//   修改字段用 set('name', value) → setForm(prev => ({...prev, name: value}))
+// ═══════════════════════════════════════════════════════════════
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
@@ -5,8 +21,10 @@ import { mockSignup } from '../services/userService';
 import { ROUTES } from '../constants/routes';
 import { C } from '../constants/colors';
 
+// 健身目標選項（固定三個）
 const HEALTH_GOALS = ['增肌', '減脂', '保持體重'];
 
+// 飲食需求選項（可多選）
 const DIETARY_OPTIONS = [
   { label: '素食',     value: '素食'     },
   { label: '純素',     value: '純素'     },
@@ -18,7 +36,7 @@ const DIETARY_OPTIONS = [
   { label: '堅果過敏', value: '堅果過敏' },
 ];
 
-// Section header with left accent bar
+// 區塊標題（帶左側豎線裝飾）——函數組件最簡形式：props → JSX
 const SectionLabel = ({ children }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '18px', marginTop: '28px' }}>
     <div style={{ width: '3px', height: '18px', borderRadius: '2px', background: C.primary, flexShrink: 0 }} />
@@ -28,22 +46,23 @@ const SectionLabel = ({ children }) => (
   </div>
 );
 
-// Field label sitting above input
+// 字段標題（輸入框上方的小標籤）
 const FieldLabel = ({ children }) => (
   <div style={{ fontSize: '12px', fontWeight: '600', color: C.textLight, letterSpacing: '0.03em', marginBottom: '7px', marginTop: '14px' }}>
     {children}
   </div>
 );
 
-// Rounded pill input
+// 圓角膠囊輸入框——受控組件（value 綁定外部 state，onChange 回調更新 state）
+// 類比：GTK Entry 控件，帶 changed 信號回調
 const PillInput = ({ type = 'text', placeholder, value, onChange }) => (
   <input
     type={type}
     placeholder={placeholder}
     value={value}
-    onChange={e => onChange(e.target.value)}
+    onChange={e => onChange(e.target.value)} // 解包 DOM 事件，只傳純值給父組件
     style={{
-      width: '100%', boxSizing: 'border-box',
+      width: '100%', boxSizing: 'border-box', // box-sizing: padding 不超出 width
       background: C.bgTint, border: 'none', outline: 'none',
       borderRadius: '14px', padding: '13px 16px',
       fontSize: '15px', color: C.textDark,
@@ -56,24 +75,31 @@ export default function Signup() {
   const navigate = useNavigate();
   const { login } = useUser();
 
+  // 所有輸入字段統一放在一個對象 state 裡（類比 Python dict）
   const [form, setForm] = useState({
     name: '', email: '', password: '', goal: '增肌',
     targetWeight: '', age: '', height: '', weight: '',
-    dietary: [],
+    dietary: [], // 可多選的飲食需求數組
   });
   const [error, setError] = useState('');
 
+  // 修改 form 中指定字段的通用函數
+  // [field] 是計算屬性鍵——field 是變量名，方括號讓它成為鍵名
+  // 類比 Python：new_form = {**form, field: value}
   const set = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
+  // 切換飲食需求標籤的選中狀態（多選）
+  // 已選中：filter 移除；未選中：展開追加
   const toggleDietary = (val) => {
     setForm(prev => ({
       ...prev,
       dietary: prev.dietary.includes(val)
-        ? prev.dietary.filter(v => v !== val)
-        : [...prev.dietary, val],
+        ? prev.dietary.filter(v => v !== val)  // 移除
+        : [...prev.dietary, val],               // 追加
     }));
   };
 
+  // 點擊「完成設置」按鈕：調用服務層校驗，成功則登錄並跳轉
   const handleSignup = () => {
     const result = mockSignup(form);
     if (result.success) { login(result.user); navigate(ROUTES.MAP); }

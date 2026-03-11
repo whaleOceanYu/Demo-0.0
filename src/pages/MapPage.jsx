@@ -1,6 +1,8 @@
 // src/pages/MapPage.jsx
 
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
+import { ROUTES } from '../constants/routes';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -13,24 +15,24 @@ import { C } from '../constants/colors';
 const BOTTOM_NAV_H = 58;
 const SEARCH_BAR_H = 72; // top:16 + height:48 + gap:8
 
-// 真實經緯度（來源：RestaurantInfo 3.8 updated.xlsx）
+// 真實經緯度（來源：RestaurantInfo 3.11 updated.xlsx）
 const RESTAURANT_COORDS = {
-  1:  [22.2811627786248, 114.17288748889],   // 港灣茶餐廳
-  2:  [22.2817723990418, 114.173920192124],  // 中庭
-  3:  [22.2845424998463, 114.176973617901],  // 意日閣
-  4:  [22.281623030676,  114.174014269771],  // 港灣道 Café
-  5:  [22.280442821998,  114.172028529175],  // Giá Trattoria Italiana
-  6:  [22.2777342789581, 114.175488888331],  // 甘牌燒鵝
-  7:  [22.2765205259857, 114.172001636671],  // Sophia Loren Pizzeria
-  8:  [22.2763103857287, 114.173256736671],  // ULURU.HK
-  9:  [22.2779499556311, 114.179787053866],  // 陳家廚房
-  10: [22.2798101091246, 114.179058823179],  // 阿仔廚房
-  11: [22.2760350468236, 114.173454797207],  // The Pasta Shack
-  12: [22.2771144811465, 114.171939752015],  // Feather & Bone
-  13: [22.2793211260718, 114.177827990107],  // TANGRAM Bistro & Bar
-  14: [22.2804192691747, 114.177087984553],  // DiVino Patio
-  15: [22.2790693497488, 114.177058738522],  // Pepino意大利餐廳
-  16: [22.2764962698038, 114.176346973394],  // 新嚐泰泰國餐廳
+  1:  [22.2810243166764, 114.172897835560],  // 港灣茶餐廳
+  2:  [22.2815930012462, 114.173665076404],  // 中庭
+  3:  [22.2830597247851, 114.172792128012],  // 意日閣
+  4:  [22.2810540999861, 114.172897835560],  // 港灣道 Café
+  5:  [22.2803520463179, 114.171771776052],  // Giá Trattoria Italiana
+  6:  [22.2776412996342, 114.175305688008],  // 甘牌燒鵝
+  7:  [22.2763254557215, 114.171484443656],  // Sophia Loren Pizzeria
+  8:  [22.2761393383449, 114.172725745871],  // ULURU.HK
+  9:  [22.2777931632546, 114.179134273324],  // 陳家廚房
+  10: [22.2796239511511, 114.178490088971],  // 阿仔廚房
+  11: [22.2754416797655, 114.171611658365],  // The Pasta Shack
+  12: [22.2768672468736, 114.171360855277],  // Feather & Bone
+  13: [22.2791599723523, 114.176864181646],  // TANGRAM Bistro & Bar
+  14: [22.2802827520687, 114.176347345668],  // DiVino Patio
+  15: [22.2789525789672, 114.176429045505],  // Pepino意大利餐廳
+  16: [22.2761385877836, 114.173730491342],  // 新嚐泰泰國餐廳
 };
 
 const getMatchCount = (restaurant, goal) => {
@@ -106,6 +108,17 @@ function MapController({ setZoom, mapRef }) {
   useEffect(() => {
     mapRef.current = map;
     setZoom(map.getZoom());
+    // 修正初始視角：讓會展中心出現在搜索欄下、餐廳面板上的可見區域中心
+    // （而非全屏的幾何中心，全屏中心會偏下，大部分被面板遮住）
+    const defaultPanelH = window.innerHeight * 0.45;
+    const visibleTop    = SEARCH_BAR_H;
+    const visibleBottom = window.innerHeight - defaultPanelH - BOTTOM_NAV_H - 8;
+    const targetY       = (visibleTop + visibleBottom) / 2;
+    const offsetPx      = window.innerHeight / 2 - targetY; // 正值 = 地圖中心南移
+    const hkcec         = [22.2833, 114.1731];
+    const pt            = map.project(hkcec, 15);
+    const adjusted      = map.unproject(L.point(pt.x, pt.y + offsetPx), 15);
+    map.setView(adjusted, 15, { animate: false });
   }, [map]); // eslint-disable-line
   useMapEvents({ zoomend: () => setZoom(map.getZoom()) });
   return null;
@@ -130,7 +143,7 @@ function getDishTier(dish, isGain) {
 }
 
 // ── Inline restaurant detail panel ──────────────────────────
-function RestaurantDetail({ restaurant, onBack, userGoal }) {
+function RestaurantDetail({ restaurant, onBack, userGoal, dishSearch }) {
   const initTab = userGoal === '減脂' ? '減脂' : '增肌';
   const [activeTab, setActiveTab] = useState(initTab);
   const isGain = activeTab === '增肌';
@@ -142,6 +155,11 @@ function RestaurantDetail({ restaurant, onBack, userGoal }) {
     if (tb !== ta) return tb - ta;
     return isGain ? b.protein - a.protein : kcal(a) - kcal(b);
   });
+
+  // 根據頂部搜索欄的 dishSearch 過濾菜品（不區分大小寫）
+  const displayDishes = dishSearch
+    ? sortedDishes.filter(d => d.name.includes(dishSearch))
+    : sortedDishes;
 
   const distLabel = restaurant.distance != null
     ? (restaurant.distance < 1000 ? restaurant.distance + 'm' : (restaurant.distance / 1000).toFixed(1) + 'km')
@@ -286,7 +304,7 @@ function RestaurantDetail({ restaurant, onBack, userGoal }) {
       {/* ── Dish list ── */}
       <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '8px 12px 12px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {sortedDishes.map(dish => {
+          {displayDishes.map(dish => {
             const dishKcal = kcal(dish);
             const tier = getDishTier(dish, isGain);
             return (
@@ -345,8 +363,27 @@ function RestaurantDetail({ restaurant, onBack, userGoal }) {
             );
           })}
         </div>
-        <div style={{ marginTop: '10px', textAlign: 'center', color: C.textLight, fontSize: '11px' }}>
-          ⚡ 營養數據為 AI 估算，僅供參考
+        {/* 搜索無結果提示 */}
+        {displayDishes.length === 0 && dishSearch && (
+          <div style={{ textAlign: 'center', color: C.textLight, fontSize: '13px', padding: '24px 0' }}>
+            找不到「{dishSearch}」相關菜品
+          </div>
+        )}
+
+        {/* 底部說明 */}
+        <div style={{ marginTop: '12px', textAlign: 'center' }}>
+          <div style={{ color: C.textLight, fontSize: '11px' }}>
+            ⚡ 營養數據為 AI 估算，僅供參考
+          </div>
+          <div style={{ marginTop: '6px', fontSize: '11px', color: C.textLight, lineHeight: 1.6 }}>
+            餐廳可能已調整餐牌，資訊或有時差
+            <a
+              href={`mailto:proteinmap.feedback@gmail.com?subject=餐牌更新：${encodeURIComponent(restaurant.name)}&body=餐廳：${encodeURIComponent(restaurant.name)}%0A%0A請在此填寫更新資訊：`}
+              style={{ color: C.primary, marginLeft: '6px', textDecoration: 'none', fontWeight: '500' }}
+            >
+              提交新餐牌
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -356,23 +393,31 @@ function RestaurantDetail({ restaurant, onBack, userGoal }) {
 export default function MapPage() {
   const { likedIds, toggleLike, goal: userGoal } = useUser();
 
-  const [searchQuery,  setSearchQuery]  = useState('');
-  const [selectedId,   setSelectedId]   = useState(null);
-  const [showPanel,    setShowPanel]    = useState(true);
-  const [activeFilter, setActiveFilter] = useState('距離');
-  const [panelHeight,  setPanelHeight]  = useState(null);
-  const [scrollThumb,  setScrollThumb]  = useState({ top: 0, height: 0, visible: false });
-  const [mapZoom,      setMapZoom]      = useState(14);
-  const [detailId,     setDetailId]     = useState(null);
-  const [displayId,    setDisplayId]    = useState(null);
+  const [searchQuery,       setSearchQuery]       = useState('');
+  const [detailSearchQuery, setDetailSearchQuery]  = useState('');
+  const [selectedId,        setSelectedId]        = useState(null);
+  const [showPanel,         setShowPanel]         = useState(true);
+  const [activeFilter,      setActiveFilter]      = useState('距離');
+  const [panelHeight,       setPanelHeight]       = useState(null);
+  const [scrollThumb,       setScrollThumb]       = useState({ top: 0, height: 0, visible: false });
+  const [mapZoom,           setMapZoom]           = useState(15);
+  const [detailId,          setDetailId]          = useState(null);
+  const [displayId,         setDisplayId]         = useState(null);
 
-  const panelRef         = useRef(null);
-  const dragStartY       = useRef(null);
-  const dragStartH       = useRef(null);
-  const isDragging       = useRef(false);
-  const mapRef           = useRef(null);
-  const detailTimer      = useRef(null);
-  const prevPanelHRef    = useRef(undefined); // saves height before opening detail (undefined = not saved)
+  const panelRef    = useRef(null);
+  const dragStartY  = useRef(null);
+  const dragStartH  = useRef(null);
+  const isDragging  = useRef(false);
+  const mapRef      = useRef(null);
+  const detailTimer = useRef(null);
+
+  // 從好友/個人檔案頁切換回地圖時，Leaflet 需重新測量容器尺寸
+  const location = useLocation();
+  useEffect(() => {
+    if (location.pathname === ROUTES.MAP) {
+      requestAnimationFrame(() => mapRef.current?.invalidateSize());
+    }
+  }, [location.pathname]);
 
   // Zoom tier: 0 = dots, 1 = partial names, 2 = all names
   // Only changes at boundaries 15 and 16, preventing unnecessary marker redraws
@@ -482,21 +527,18 @@ export default function MapPage() {
   const handleViewDetail = (e, id) => {
     e.stopPropagation();
     clearTimeout(detailTimer.current);
-    prevPanelHRef.current = panelHeight; // save (may be null = default 45vh)
+    setSelectedId(id); // 同步高亮卡片及地圖標示
     setDisplayId(id);
-    setDetailId(id);
-    setPanelHeight(getMaxPanelH());
     flyToRestaurant(id);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setDetailId(id));
+    });
   };
 
   const handleBackFromDetail = () => {
-    setDetailId(null);
-    // restore whatever height was saved (undefined means nothing was saved)
-    if (prevPanelHRef.current !== undefined) {
-      setPanelHeight(prevPanelHRef.current); // null restores default 45vh
-      prevPanelHRef.current = undefined;
-    }
-    detailTimer.current = setTimeout(() => setDisplayId(null), 400);
+    setDetailId(null);               // 觸發 translateX(100%) 滑出
+    setDetailSearchQuery('');        // 清空菜品搜索
+    detailTimer.current = setTimeout(() => setDisplayId(null), 450); // 動畫結束後卸載
   };
 
   const handleSelectCard = (id) => {
@@ -511,7 +553,7 @@ export default function MapPage() {
 
       {/* ── 全屏地圖 */}
       <MapContainer
-        center={[22.2800, 114.1730]} zoom={14}
+        center={[22.2833, 114.1731]} zoom={15}
         style={{ width: '100%', height: '100%' }}
         zoomControl={false}
       >
@@ -528,27 +570,41 @@ export default function MapPage() {
               key={r.id}
               position={coords}
               icon={markerIcons[r.id]}
+              zIndexOffset={selectedId === r.id ? 1000 : 0}
               eventHandlers={{ click: () => handleMarkerClick(r.id) }}
             />
           );
         })}
       </MapContainer>
 
-      {/* ── 懸浮搜索欄 */}
+      {/* ── 懸浮搜索欄：列表模式搜餐廳，詳情模式搜菜品 */}
       <div style={{ position: 'absolute', top: 16, left: 16, right: 16, zIndex: 1000 }}>
         <div style={{ ...floatPill, overflow: 'hidden' }}>
-          <SearchBar
-            placeholder='搜尋餐廳或菜系⋯'
-            showCancelButton={() => false}
-            value={searchQuery}
-            onChange={setSearchQuery}
-            onClear={() => setSearchQuery('')}
-            style={{ '--background': 'transparent', '--border-radius': '0', '--height': '48px', '--font-size': '15px' }}
-          />
+          {displayId ? (
+            <SearchBar
+              key="dish-search"
+              placeholder='搜尋菜品名稱⋯'
+              showCancelButton={() => false}
+              value={detailSearchQuery}
+              onChange={setDetailSearchQuery}
+              onClear={() => setDetailSearchQuery('')}
+              style={{ '--background': 'transparent', '--border-radius': '0', '--height': '48px', '--font-size': '15px' }}
+            />
+          ) : (
+            <SearchBar
+              key="rest-search"
+              placeholder='搜尋餐廳或菜系⋯'
+              showCancelButton={() => false}
+              value={searchQuery}
+              onChange={setSearchQuery}
+              onClear={() => setSearchQuery('')}
+              style={{ '--background': 'transparent', '--border-radius': '0', '--height': '48px', '--font-size': '15px' }}
+            />
+          )}
         </div>
       </div>
 
-      {/* ── 底部面板（含列表與詳情的 iOS 式 slide 容器）*/}
+      {/* ── 底部面板（僅列表，高度可拖動調節）*/}
       {showPanel && (
         <div style={{
           position: 'absolute',
@@ -558,25 +614,10 @@ export default function MapPage() {
           zIndex: 1000,
           overflow: 'hidden',
           borderRadius: '24px',
+          display: 'flex', flexDirection: 'column',
           transition: isDragging.current ? 'none' : 'height 0.28s cubic-bezier(0.4,0,0.2,1)',
           pointerEvents: 'none',
         }}>
-
-          {/* Slide container: list left, detail right */}
-          <div style={{
-            display: 'flex',
-            width: '200%',
-            height: '100%',
-            transform: detailId ? 'translateX(-50%)' : 'translateX(0)',
-            transition: 'transform 0.35s cubic-bezier(0.4,0,0.2,1)',
-          }}>
-
-            {/* ── Left: restaurant list ──────────────────────────── */}
-            <div style={{
-              width: '50%', height: '100%',
-              display: 'flex', flexDirection: 'column',
-              pointerEvents: 'none',
-            }}>
               {/* Drag handle */}
               <div
                 onTouchStart={handleDragStart}
@@ -770,20 +811,31 @@ export default function MapPage() {
                   </div>
                 )}
               </div>
-            </div>{/* /list panel */}
+        </div>
+      )}
 
-            {/* ── Right: restaurant detail ─────────────────────── */}
-            <div style={{ width: '50%', height: '100%', pointerEvents: detailId ? 'auto' : 'none' }}>
-              {detailRestaurant && (
-                <RestaurantDetail
-                  restaurant={detailRestaurant}
-                  onBack={handleBackFromDetail}
-                  userGoal={userGoal}
-                />
-              )}
-            </div>
-
-          </div>{/* /slide container */}
+      {/* ── 詳情覆蓋層：完全獨立，從屏幕右邊緣純橫向滑入/滑出 */}
+      {displayId && (
+        <div style={{
+          position: 'absolute',
+          top: SEARCH_BAR_H,
+          left: 0, right: 0,
+          bottom: BOTTOM_NAV_H,
+          zIndex: 1001,
+          transform: detailId ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.42s cubic-bezier(0.4,0,0.2,1)',
+          overflow: 'hidden',
+          borderRadius: '24px 24px 0 0',
+          boxShadow: '-4px 0 24px rgba(0,0,0,0.10)',
+        }}>
+          {detailRestaurant && (
+            <RestaurantDetail
+              restaurant={detailRestaurant}
+              onBack={handleBackFromDetail}
+              userGoal={userGoal}
+              dishSearch={detailSearchQuery}
+            />
+          )}
         </div>
       )}
 

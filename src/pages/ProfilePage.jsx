@@ -11,6 +11,12 @@ import AddFoodSheet from '../components/ui/AddFoodSheet';
 
 const GOALS = ['增肌', '減脂', '保持體重'];
 
+const TARGETS = {
+  '增肌':    { kcal: 2294, protein: 104 },
+  '減脂':    { kcal: 1668, protein: 116 },
+  '保持體重': { kcal: 2085, protein:  93 },
+};
+
 // 更符合菜品特色的真實餐飲數據
 const MOCK_MEALS = [
   {
@@ -66,8 +72,8 @@ export default function ProfilePage() {
   const checkedMeals   = meals.filter(m => m.checked);
   const totalKcal      = checkedMeals.reduce((s, m) => s + m.kcal, 0);
   const totalProtein   = checkedMeals.reduce((s, m) => s + m.protein, 0);
-  const targetKcal     = 2200;
-  const targetProtein  = 150;
+  const targetKcal     = TARGETS[goal]?.kcal    ?? 2085;
+  const targetProtein  = TARGETS[goal]?.protein ?? 93;
   const remainingKcal  = targetKcal - totalKcal;
   const kcalExceeded   = remainingKcal < 0;
 
@@ -124,11 +130,12 @@ export default function ProfilePage() {
               </div>
             ))}
           </div>
+
         </div>
 
         {/* ── 2. 今日追蹤（雙環圖） ────────────────────── */}
         <div style={cardStyle}>
-          <SectionHeader title="今日追蹤" right={new Date().toLocaleDateString('zh-TW', { month: 'long', day: 'numeric' })} />
+          <SectionHeader title="今日追蹤" right={new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: 'long', day: 'numeric' })} />
           <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
             <div style={{ textAlign: 'center' }}>
               {/* scaleX(-1) 使進度條逆時針方向消耗 */}
@@ -285,6 +292,31 @@ export default function ProfilePage() {
               + 添加食物
             </div>
           </div>
+
+          {/* 查看本月飲食記錄 */}
+          <div style={{ marginTop: '8px', textAlign: 'center' }}>
+            <span style={{ fontSize: '12px', color: C.primary, cursor: 'pointer', fontWeight: '500' }}>
+              查看本月飲食記錄
+            </span>
+          </div>
+        </div>
+
+        {/* ── 修改個人資料 ─────────────────────────────── */}
+        <div
+          style={{
+            borderRadius: '20px',
+            padding: '14px 16px',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            background: 'rgba(255,255,255,0.88)',
+            backdropFilter: 'blur(12px)',
+            marginBottom: '12px',
+            textAlign: 'center',
+            fontSize: '14px', fontWeight: '600', color: C.primaryDark,
+            cursor: 'pointer',
+            border: `1.5px solid ${C.border}`,
+          }}
+        >
+          修改個人資料
         </div>
 
       </div>
