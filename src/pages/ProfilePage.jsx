@@ -86,7 +86,7 @@ export default function ProfilePage() {
   return (
     /* 外層隱藏原生滾動條，保持 BottomNav 位置穩定 */
     <div style={{ maxWidth: '450px', margin: '0 auto', height: '100dvh', overflow: 'hidden', background: C.bg }}>
-      <div className="hide-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '20px 14px 88px' }}>
+      <div className="hide-scrollbar" style={{ height: '100%', overflowY: 'auto', padding: '20px 14px 108px' }}>
 
         {/* ── 1. 個人信息 ─────────────────────────────── */}
         <div style={cardStyle}>

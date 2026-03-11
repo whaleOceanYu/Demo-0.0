@@ -120,7 +120,11 @@ export default function BottomNav() {
       <TabBar
         activeKey={location.pathname}
         onChange={key => navigate(key)}
-        style={{ '--adm-color-primary': C.primary, backgroundColor: 'transparent' }}
+        style={{
+          '--adm-color-primary': C.primary,
+          '--adm-tab-bar-height': '72px',
+          backgroundColor: 'transparent',
+        }}
       >
         {/* TABS.map：遍歷標籤配置數組，每個生成一個 TabBar.Item
               active：pathname 和 tab.key 相同時為 true
@@ -131,12 +135,15 @@ export default function BottomNav() {
           return (
             <TabBar.Item
               key={tab.key}
-              icon={tab.icon(active)}
+              icon={<div style={{ paddingTop: '6px' }}>{tab.icon(active)}</div>}
               title={
                 <span style={{
+                  display: 'block',
                   fontSize: '13px',
                   fontWeight: active ? '600' : '400',
                   color: active ? C.primary : C.textLight,
+                  marginTop: '4px',
+                  paddingBottom: '4px',
                 }}>
                   {tab.title}
                 </span>

@@ -45,7 +45,7 @@ export default function FriendsPage() {
   const { isGuest } = useUser();
 
   return (
-    <div className="hide-scrollbar" style={{ maxWidth: '450px', margin: '0 auto', padding: '24px 14px 88px', background: C.bg, height: '100dvh', overflowY: 'auto' }}>
+    <div className="hide-scrollbar" style={{ maxWidth: '450px', margin: '0 auto', padding: '24px 14px 108px', background: C.bg, height: '100dvh', overflowY: 'auto' }}>
 
       {/* 好友列表 */}
       <div style={cardStyle}>
