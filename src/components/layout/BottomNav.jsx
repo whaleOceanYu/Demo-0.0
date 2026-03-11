@@ -142,7 +142,7 @@ export default function BottomNav() {
                   fontSize: '13px',
                   fontWeight: active ? '600' : '400',
                   color: active ? C.primary : C.textLight,
-                  marginTop: '4px',
+                  marginTop: '7px',
                   paddingBottom: '4px',
                 }}>
                   {tab.title}
